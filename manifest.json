@@ -1,0 +1,25 @@
+{
+  "name": "Dean Price",
+  "short_name": "Dean Price",
+  "description": "Dean Price's personal web page with Email, Phone, WhatsApp, Facebook and Instagram contact details.",
+  "id": "/",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#96E4EF",
+  "theme_color": "#4494A3",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

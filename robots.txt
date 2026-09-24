@@ -1,0 +1,84 @@
+# =================================== #
+# DeanPrice.com Robots Exclusion File #
+# =================================== #
+
+# --- 1. THE VIP BOTS (Search Engines & Approved AI) ---
+User-agent: Googlebot
+User-agent: Google-Extended
+User-agent: Google-InspectionTool
+User-agent: Bingbot
+User-agent: DuckDuckBot
+User-agent: DuckAssistBot
+User-agent: Slurp
+User-agent: Applebot
+User-agent: Applebot-Extended
+User-agent: Facebot
+User-agent: FacebookExternalHit
+User-agent: Twitterbot
+User-agent: LinkedInBot
+User-agent: Pinterestbot
+User-agent: Bytespider
+User-agent: Discordbot
+User-agent: Slackbot
+User-agent: Slackbot-LinkExpanding
+User-agent: TelegramBot
+User-agent: WhatsApp
+User-agent: GPTBot
+User-agent: ChatGPT-User
+User-agent: OAI-SearchBot
+User-agent: ClaudeBot
+User-agent: Claude-User
+User-agent: Claude-SearchBot
+User-agent: GrokBot
+User-agent: xAI-Grok
+User-agent: PerplexityBot
+User-agent: CCBot
+User-agent: meta-externalagent
+User-agent: cohere-ai
+User-agent: Amazonbot
+User-agent: YouBot
+User-agent: AI2Bot
+User-agent: AhrefsBot
+User-agent: DotBot
+User-agent: SemrushBot
+User-agent: SemrushBot-SA
+User-agent: Baiduspider
+User-agent: Yandex
+User-agent: Seznambot
+User-agent: Yeti
+User-agent: NaverBot
+User-agent: Sogou web spider
+User-agent: W3C_Validator
+User-agent: FeedFetcher-Google
+
+# What the VIPs are allowed to see:
+Allow: /$
+Allow: /?*
+Allow: /index.html
+Allow: /llms.txt
+Allow: /llms-full.txt
+Allow: /sitemap.xml
+Allow: /manifest.json
+Allow: /favicon.ico
+Allow: /favicon.svg
+Allow: /*.png
+Allow: /safari-pinned-tab.svg
+
+# Let VIPs see the engine so they can read the "noindex" HTTP header
+Allow: /main.wasm
+Allow: /wasm_exec.js
+Allow: /sw.js
+
+# Default Deny: Block all paths not explicitly allowed above
+Disallow: /
+
+# --- 2. THE WALL (Everyone Else) ---
+# Catch-all for unknown scrapers, archive bots, and unverified AI
+User-agent: *
+Allow: /llms.txt
+Allow: /llms-full.txt
+Allow: /sitemap.xml
+Disallow: /
+
+# =================================== #
+Sitemap: https://www.deanprice.com/sitemap.xml
