@@ -6,7 +6,9 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"strings"
+	"time"
 )
 
 func getCommitSHA() string {
@@ -22,6 +24,25 @@ func getCommitSHA() string {
 		}
 	}
 	return "dev"
+}
+
+func getLastmodDate() string {
+	// 1. Exact commit date of index.html (preserves content freshness without false churn)
+	cmd := exec.Command("git", "log", "-1", "--format=%cs", "index.html")
+	if out, err := cmd.Output(); err == nil {
+		if date := strings.TrimSpace(string(out)); date != "" {
+			return date
+		}
+	}
+	// 2. Fall back to HEAD commit date (in shallow clones where index.html wasn't in recent commits)
+	cmd = exec.Command("git", "log", "-1", "--format=%cs")
+	if out, err := cmd.Output(); err == nil {
+		if date := strings.TrimSpace(string(out)); date != "" {
+			return date
+		}
+	}
+	// 3. Fall back to current UTC date (zero-git/air-gapped safety net)
+	return time.Now().UTC().Format("2006-01-02")
 }
 
 func copyFile(src, dst string) error {
@@ -70,7 +91,6 @@ func assembleDist() error {
 		"wasm_exec.js",
 		"manifest.json",
 		"robots.txt",
-		"sitemap.xml",
 		"_headers",
 		"_routes.json",
 	}
@@ -120,6 +140,29 @@ func assembleDist() error {
 	}
 	copiedCount++
 
-	fmt.Printf("Successfully assembled dist/ (%d assets, sw.js cache version: %s)\n", copiedCount, commitSHA)
+	// 6. Copy and dynamically stamp sitemap.xml with lastmod date
+	sitemapData, err := os.ReadFile("sitemap.xml")
+	if err != nil {
+		return fmt.Errorf("failed to read sitemap.xml: %w", err)
+	}
+	lastmodDate := getLastmodDate()
+	lastmodTag := fmt.Sprintf("<lastmod>%s</lastmod>", lastmodDate)
+
+	reLastmod := regexp.MustCompile(`<lastmod>.*?</lastmod>`)
+	var stampedSitemap []byte
+	if reLastmod.Match(sitemapData) {
+		stampedSitemap = reLastmod.ReplaceAll(sitemapData, []byte(lastmodTag))
+	} else {
+		// Defensive fallback: inject before </url> if tag was missing from source
+		reURL := regexp.MustCompile(`(?m)^\s*</url>`)
+		stampedSitemap = reURL.ReplaceAll(sitemapData, []byte(fmt.Sprintf("    %s\n  </url>", lastmodTag)))
+	}
+
+	if err := os.WriteFile(filepath.Join("dist", "sitemap.xml"), stampedSitemap, 0644); err != nil {
+		return fmt.Errorf("failed to write dist/sitemap.xml: %w", err)
+	}
+	copiedCount++
+
+	fmt.Printf("Successfully assembled dist/ (%d assets, sw.js cache: %s, sitemap lastmod: %s)\n", copiedCount, commitSHA, lastmodDate)
 	return nil
 }
