@@ -146,16 +146,16 @@ func assembleDist() error {
 		return fmt.Errorf("failed to read sitemap.xml: %w", err)
 	}
 	lastmodDate := getLastmodDate()
-	lastmodTag := fmt.Sprintf("<lastmod>%s</lastmod>", lastmodDate)
+	lastmodBytes := fmt.Appendf(nil, "<lastmod>%s</lastmod>", lastmodDate)
 
 	reLastmod := regexp.MustCompile(`<lastmod>.*?</lastmod>`)
 	var stampedSitemap []byte
 	if reLastmod.Match(sitemapData) {
-		stampedSitemap = reLastmod.ReplaceAll(sitemapData, []byte(lastmodTag))
+		stampedSitemap = reLastmod.ReplaceAll(sitemapData, lastmodBytes)
 	} else {
 		// Defensive fallback: inject before </url> if tag was missing from source
 		reURL := regexp.MustCompile(`(?m)^\s*</url>`)
-		stampedSitemap = reURL.ReplaceAll(sitemapData, []byte(fmt.Sprintf("    %s\n  </url>", lastmodTag)))
+		stampedSitemap = reURL.ReplaceAll(sitemapData, fmt.Appendf(nil, "    %s\n  </url>", lastmodBytes))
 	}
 
 	if err := os.WriteFile(filepath.Join("dist", "sitemap.xml"), stampedSitemap, 0644); err != nil {
