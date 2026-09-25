@@ -385,4 +385,10 @@ func TestIconRowResponsiveIntegrity(t *testing.T) {
 	if !imgRe.MatchString(htmlStr) {
 		t.Errorf("index.html missing fluid 'width: 100%%' on #iconrow img")
 	}
+
+	// 5. Verify negative breakout margin to reclaim hero badge sizing on mobile
+	breakoutRe := regexp.MustCompile(`(?s)#iconrow\s*\{[^}]*margin-left:\s*-12px`)
+	if !breakoutRe.MatchString(htmlStr) || !strings.Contains(htmlStr, "calc(100% + 24px)") {
+		t.Errorf("index.html missing breakout sizing 'calc(100%% + 24px)' on #iconrow")
+	}
 }
