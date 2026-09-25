@@ -352,3 +352,37 @@ func TestContactResolutionIntegration(t *testing.T) {
 		t.Errorf("contact.ResolveContact(email) returned unexpected format: %q", email)
 	}
 }
+
+func TestIconRowResponsiveIntegrity(t *testing.T) {
+	htmlBytes, err := os.ReadFile("index.html")
+	if err != nil {
+		t.Fatalf("Failed to read index.html: %v", err)
+	}
+	htmlStr := string(htmlBytes)
+
+	// 1. Verify rigid legacy constraints are eliminated
+	if strings.Contains(htmlStr, "calc(18vw - 2px)") {
+		t.Errorf("index.html still contains buggy calculation 'calc(18vw - 2px)'")
+	}
+	if strings.Contains(htmlStr, "min-width: 45px") {
+		t.Errorf("index.html still contains legacy rigid floor 'min-width: 45px'")
+	}
+
+	// 2. Verify whitespace-tolerant flex gap on #iconrow
+	gapRe := regexp.MustCompile(`(?s)#iconrow\s*\{[^}]*gap:\s*clamp\(`)
+	if !gapRe.MatchString(htmlStr) {
+		t.Errorf("index.html missing responsive 'gap: clamp(...)' on #iconrow")
+	}
+
+	// 3. Verify flex-basis on #iconrow a
+	flexRe := regexp.MustCompile(`(?s)#iconrow\s+a\s*\{[^}]*flex:\s*0\s+1\s+78px`)
+	if !flexRe.MatchString(htmlStr) {
+		t.Errorf("index.html missing 'flex: 0 1 78px' on #iconrow a")
+	}
+
+	// 4. Verify fluid image width without rigid min-width floor
+	imgRe := regexp.MustCompile(`(?s)#iconrow\s+img\s*\{[^}]*width:\s*100%`)
+	if !imgRe.MatchString(htmlStr) {
+		t.Errorf("index.html missing fluid 'width: 100%%' on #iconrow img")
+	}
+}

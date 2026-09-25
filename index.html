@@ -243,18 +243,27 @@
             flex-direction: row;
             justify-content: center;
             align-items: center;
+            gap: clamp(6px, 2vw, 14px);
             margin-bottom: clamp(20px, 4.5vh, 45px);
             width: 100%;
+            box-sizing: border-box;
+        }
+
+        #iconrow a {
+            display: inline-flex;
+            justify-content: center;
+            align-items: center;
+            flex: 0 1 78px;
+            min-width: 0;
         }
 
         #iconrow img {
+            width: 100%;
             max-width: 78px;
-            width: calc(18vw - 2px);
-            min-width: 45px;
-            margin: 0 clamp(2px, 1.5vw, 6px);
             height: auto;
             aspect-ratio: 1/1;
             transition: transform 0.2s ease;
+            display: block;
         }
 
         #iconrow a:active img {
