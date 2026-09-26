@@ -6,7 +6,7 @@
 [![WebAssembly](https://img.shields.io/badge/WebAssembly-WASM-654FF0?logo=webassembly&logoColor=white)](https://webassembly.org)
 [![Cloudflare](https://img.shields.io/badge/Cloudflare-Pages_&_Edge_Functions-F38020?logo=cloudflare&logoColor=white)](https://pages.cloudflare.com)
 
-A high-performance, privacy-hardened digital identity card and infrastructure showcase engineered with Go WebAssembly, Cloudflare Edge Functions, and domain-bound client-side obfuscation for high-friction anti-scraping and crawler defence.
+A high-performance, privacy-hardened digital identity card and infrastructure showcase engineered with Go WebAssembly, Cloudflare Edge Functions, and domain-bound client-side obfuscation for zero-latency static crawler and regex scraper deterrence.
 
 🌐 **Live Website:** [https://www.deanprice.com](https://www.deanprice.com/)
 
@@ -18,9 +18,9 @@ A high-performance, privacy-hardened digital identity card and infrastructure sh
 * Compiled with **TinyGo** (`-opt=z -no-debug -panic=trap`) and post-optimised with Binaryen's `wasm-opt -Oz` into a **40.7 KB micro-WASM binary** (17.1 KB gzipped, compared to ~2.5 MB standard Go).
 * Stripped of the Go runtime scheduler, timer queues, reflection, and panic unwinding via synchronous Edge DOM hydration, executing in **<2 ms** inside the browser's native WebAssembly engine.
 
-### 2. Domain-Bound Anti-Scraping Obfuscation Engine
+### 2. Domain-Bound Obfuscation & Crawler Deterrence
 * **Algorithm:** 64-bit Donald Knuth Linear Congruential Generator (LCG) coupled with Sebastiano Vigna & Guy Steele's **SplitMix64** non-linear bit diffusion.
-* **Domain-Bound & Target-Verified:** Keystreams are mathematically locked to `location.hostname`, field nonces, and a runtime initialisation context—providing **high-friction client-side obfuscation and honeypot crawler defence without interaction delays**.
+* **Domain-Bound & Target-Verified:** Keystreams are mathematically locked to `location.hostname`, field nonces, and a runtime initialisation context—providing **zero-latency client-side obfuscation and honeypot defence against static crawlers and regex harvesters without requiring intrusive CAPTCHAs or interaction delays**. (Note: Designed specifically for high-friction static harvesting resistance rather than cryptographic protection against fully-rendered headless browsers).
 * **12-Factor CI/CD Injection:** Production secrets and master seeds are injected exclusively at build time via Cloudflare Pages environment variables, guarded by CI assertions to ensure **zero plaintexts or private keys exist in the repository**.
 
 ### 3. Edge-Driven Regional Localisation
