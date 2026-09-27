@@ -29,8 +29,11 @@ func getMasterSeed() uint64 {
 	return defaultMasterSeed
 }
 
-func encode(text string, nonce string, seed uint64) string {
+func encode(text string, nonce string, seed uint64, withType bool) string {
 	if text == "" {
+		if withType {
+			return "[]byte(nil)"
+		}
 		return "nil"
 	}
 
@@ -40,29 +43,44 @@ func encode(text string, nonce string, seed uint64) string {
 		strVals[i] = strconv.Itoa(int(b))
 	}
 
-	return "[]byte{" + strings.Join(strVals, ", ") + "}"
+	prefix := ""
+	if withType {
+		prefix = "[]byte"
+	}
+	return prefix + "{" + strings.Join(strVals, ", ") + "}"
 }
 
 func processEmail(e string, seed uint64) string {
+	e = strings.TrimSpace(e)
+	if e == "" {
+		return encode("", "email", seed, true)
+	}
 	if !strings.HasPrefix(e, "mailto:") {
 		e = "mailto:" + e
 	}
-	return encode(e, "email", seed)
+	return encode(e, "email", seed, true)
 }
 
 func processPhone(phone string, region string, seed uint64) string {
+	phone = strings.TrimSpace(phone)
+	if phone == "" {
+		return encode("", "phone_"+region, seed, false)
+	}
 	if !strings.HasPrefix(phone, "tel:") {
 		if !strings.HasPrefix(phone, "+") {
 			phone = "+" + phone
 		}
 		phone = "tel:" + phone
 	}
-	return encode(phone, "phone_"+region, seed)
+	return encode(phone, "phone_"+region, seed, false)
 }
 
 func processWA(wa string, region string, seed uint64) string {
 	cleanNum := defaults.CleanDigits(wa)
-	return encode("https://wa.me/"+cleanNum, "wa_"+region, seed)
+	if cleanNum == "" {
+		return encode("", "wa_"+region, seed, false)
+	}
+	return encode("https://wa.me/"+cleanNum, "wa_"+region, seed, false)
 }
 
 func generateData(cfg Config) error {
@@ -122,5 +140,3 @@ var waMap = map[string][]byte{
 
 	return nil
 }
-
-

@@ -10,8 +10,8 @@ func ResolveCountry(loc string) string {
 		return "TR"
 
 	case "GB", "IM", "JE", "GG", // UK & Crown Dependencies
-		"", "XX",                // Undetected / Unknown location
-		"T1":                    // Tor exit node (treated as unverified/fallback)
+		"", "XX", // Undetected / Unknown location
+		"T1": // Tor exit node (treated as unverified/fallback)
 		return "GB"
 
 	default:
