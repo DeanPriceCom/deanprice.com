@@ -35,8 +35,8 @@ func initContext() {
 		loc = meta.Get("content").String()
 	}
 
-	country = contact.ResolveCountry(loc)
 	rawHost = js.Global().Get("location").Get("hostname").String()
+	country = contact.ResolveCountryWithHost(loc, rawHost)
 }
 
 func main() {

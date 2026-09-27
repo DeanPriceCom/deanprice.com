@@ -19,13 +19,22 @@ func IsDevOrPreviewHost(h string) bool {
 		strings.HasSuffix(h, ".ts.net")
 }
 
+// IsAuthorizedDomain checks if the hostname is an authorized production or preview host.
+func IsAuthorizedDomain(h string) bool {
+	h = strings.TrimPrefix(strings.ToLower(strings.TrimSpace(h)), "www.")
+	if h == "deanprice.com" || h == "deanprice.uk" || h == "deanprice.tr" || h == "deanprice.ie" {
+		return true
+	}
+	return IsDevOrPreviewHost(h)
+}
+
 func decrypt(encoded []byte, rawHost string, nonce string) string {
 	if len(encoded) == 0 {
 		return ""
 	}
 
 	hostname := strings.TrimPrefix(strings.ToLower(strings.TrimSpace(rawHost)), "www.")
-	if IsDevOrPreviewHost(hostname) {
+	if IsAuthorizedDomain(hostname) {
 		hostname = "deanprice.com"
 	}
 

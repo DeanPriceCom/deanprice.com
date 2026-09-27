@@ -15,7 +15,7 @@ A high-performance, privacy-hardened digital identity card and infrastructure sh
 ## 🏛️ Architectural Highlights
 
 ### 1. Micro-WebAssembly Runtime (TinyGo)
-* Compiled with **TinyGo** (`-opt=z -no-debug -panic=trap`) and post-optimised with Binaryen's `wasm-opt -Oz` into a **40.7 KB micro-WASM binary** (17.1 KB gzipped, compared to ~2.5 MB standard Go).
+* Compiled with **TinyGo** (`-opt=z -no-debug -panic=trap`) and post-optimised with Binaryen's `wasm-opt -Oz` into a **41.4 KB micro-WASM binary** (17.3 KB gzipped, compared to ~2.5 MB standard Go).
 * Stripped of the Go runtime scheduler, timer queues, reflection, and panic unwinding via synchronous Edge DOM hydration, executing in **<2 ms** inside the browser's native WebAssembly engine.
 
 ### 2. Domain-Bound Obfuscation & Crawler Deterrence

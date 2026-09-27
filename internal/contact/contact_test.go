@@ -27,6 +27,12 @@ func TestEmailDecryptionAllHosts(t *testing.T) {
 		"",
 		"deanprice.com",
 		"www.deanprice.com",
+		"deanprice.uk",
+		"www.deanprice.uk",
+		"deanprice.tr",
+		"www.deanprice.tr",
+		"deanprice.ie",
+		"www.deanprice.ie",
 		"localhost",
 		"127.0.0.1",
 		"::1",
@@ -60,10 +66,14 @@ func TestPhoneDecryptionAllRegions(t *testing.T) {
 		{"TR", "tel:" + testPhoneTR},
 	}
 
+	hosts := []string{"deanprice.com", "deanprice.uk", "deanprice.tr", "deanprice.ie", "www.deanprice.uk"}
+
 	for _, tt := range tests {
-		got := decrypt(phoneMap[tt.region], "deanprice.com", "phone_"+tt.region)
-		if got != tt.expected {
-			t.Errorf("Region: %s, got %q, want %q", tt.region, got, tt.expected)
+		for _, host := range hosts {
+			got := decrypt(phoneMap[tt.region], host, "phone_"+tt.region)
+			if got != tt.expected {
+				t.Errorf("Region: %s, Host: %s, got %q, want %q", tt.region, host, got, tt.expected)
+			}
 		}
 	}
 }
@@ -78,18 +88,80 @@ func TestWhatsAppDecryptionAllRegions(t *testing.T) {
 		{"TR", "https://wa.me/" + defaults.CleanDigits(testPhoneTR)},
 	}
 
+	hosts := []string{"deanprice.com", "deanprice.uk", "deanprice.tr", "deanprice.ie", "www.deanprice.tr"}
+
 	for _, tt := range tests {
-		got := decrypt(waMap[tt.region], "deanprice.com", "wa_"+tt.region)
-		if got != tt.expected {
-			t.Errorf("Region: %s, got %q, want %q", tt.region, got, tt.expected)
+		for _, host := range hosts {
+			got := decrypt(waMap[tt.region], host, "wa_"+tt.region)
+			if got != tt.expected {
+				t.Errorf("Region: %s, Host: %s, got %q, want %q", tt.region, host, got, tt.expected)
+			}
 		}
 	}
 }
 
 func TestDomainLockProtection(t *testing.T) {
-	got := decrypt(emailBytes, "evil-scraper.com", "email")
-	if got == "mailto:"+testEmail {
-		t.Errorf("Security flaw: evil-scraper.com successfully decrypted email: %q", got)
+	unauthorizedHosts := []string{"evil-scraper.com", "unauthorized-mirror.com", "deanprice.org", "phishing-deanprice.com"}
+	for _, host := range unauthorizedHosts {
+		got := decrypt(emailBytes, host, "email")
+		if got == "mailto:"+testEmail {
+			t.Errorf("Security flaw: %s successfully decrypted email: %q", host, got)
+		}
+	}
+}
+
+func TestResolveCountryWithHost(t *testing.T) {
+	// 1. Regional alias domains take absolute precedence over loc
+	if got := ResolveCountryWithHost("TR", "deanprice.uk"); got != "GB" {
+		t.Errorf("Expected GB for deanprice.uk even with loc=TR, got %q", got)
+	}
+	if got := ResolveCountryWithHost("GB", "deanprice.tr"); got != "TR" {
+		t.Errorf("Expected TR for deanprice.tr even with loc=GB, got %q", got)
+	}
+	if got := ResolveCountryWithHost("GB", "deanprice.ie"); got != "IE" {
+		t.Errorf("Expected IE for deanprice.ie even with loc=GB, got %q", got)
+	}
+
+	// 2. Generic hosts (deanprice.com, localhost) respect loc code
+	if got := ResolveCountryWithHost("TR", "deanprice.com"); got != "TR" {
+		t.Errorf("Expected TR for deanprice.com with loc=TR, got %q", got)
+	}
+	if got := ResolveCountryWithHost("IE", "localhost"); got != "IE" {
+		t.Errorf("Expected IE for localhost with loc=IE, got %q", got)
+	}
+	if got := ResolveCountryWithHost("GB", "preview.pages.dev"); got != "GB" {
+		t.Errorf("Expected GB for preview with loc=GB, got %q", got)
+	}
+	if got := ResolveCountryWithHost("", "deanprice.com"); got != "GB" {
+		t.Errorf("Expected default GB for deanprice.com with empty loc, got %q", got)
+	}
+
+	// 3. Offline / un-injected fallback: inspect hostname suffix
+	fallbackTests := []struct {
+		host     string
+		expected string
+	}{
+		{"deanprice.tr", "TR"},
+		{"www.deanprice.tr", "TR"},
+		{"preview.deanprice.tr", "TR"},
+		{"DEANPRICE.TR", "TR"},
+		{"deanprice.ie", "IE"},
+		{"www.deanprice.ie", "IE"},
+		{"DEANPRICE.IE", "IE"},
+		{"deanprice.uk", "GB"},
+		{"www.deanprice.uk", "GB"},
+		{"DEANPRICE.UK", "GB"},
+		{"deanprice.com", "GB"},
+		{"www.deanprice.com", "GB"},
+		{"localhost", "GB"},
+		{"", "GB"},
+	}
+
+	for _, tt := range fallbackTests {
+		got := ResolveCountryWithHost("", tt.host)
+		if got != tt.expected {
+			t.Errorf("ResolveCountryWithHost('', %q) = %q, want %q", tt.host, got, tt.expected)
+		}
 	}
 }
 
@@ -221,7 +293,33 @@ func TestResolveContact(t *testing.T) {
 		})
 	}
 
-	// 2. Dev and Preview host normalization
+	// 2. Alias host resolution
+	aliasTests := []struct {
+		channel  string
+		region   string
+		host     string
+		expected string
+	}{
+		{"phone", "GB", "deanprice.uk", expectedPhoneGB},
+		{"whatsapp", "GB", "deanprice.uk", expectedWAGB},
+		{"phone", "GB", "www.deanprice.uk", expectedPhoneGB},
+		{"phone", "TR", "deanprice.tr", expectedPhoneTR},
+		{"whatsapp", "TR", "deanprice.tr", expectedWATR},
+		{"phone", "TR", "www.deanprice.tr", expectedPhoneTR},
+		{"phone", "IE", "deanprice.ie", expectedPhoneIE},
+		{"whatsapp", "IE", "deanprice.ie", expectedWAIE},
+		{"phone", "IE", "www.deanprice.ie", expectedPhoneIE},
+	}
+	for _, tt := range aliasTests {
+		t.Run(fmt.Sprintf("%s_%s_%s", tt.channel, tt.region, tt.host), func(t *testing.T) {
+			got := ResolveContact(tt.channel, tt.region, tt.host)
+			if got != tt.expected {
+				t.Errorf("ResolveContact(%q, %q, %q) = %q, want %q", tt.channel, tt.region, tt.host, got, tt.expected)
+			}
+		})
+	}
+
+	// 3. Dev and Preview host normalization
 	devHosts := []string{"localhost", "127.0.0.1", "::1", "[::1]", "", "iphone.local", "laptop.lan", "preview.pages.dev", "phone.ts.net"}
 	for _, host := range devHosts {
 		t.Run("dev_host_"+host, func(t *testing.T) {

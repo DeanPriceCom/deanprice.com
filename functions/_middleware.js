@@ -7,7 +7,73 @@ class CountryInjector {
   }
 }
 
+class RobotsRewriter {
+  element(element) {
+    element.setAttribute("content", "noindex, nofollow, noarchive, nosnippet");
+  }
+}
+
+const ALIAS_ROBOTS_TXT = `# Disallow AI models and training scrapers
+User-agent: GPTBot
+User-agent: ChatGPT-User
+User-agent: ClaudeBot
+User-agent: Claude-User
+User-agent: CCBot
+User-agent: PerplexityBot
+User-agent: Bytespider
+User-agent: Amazonbot
+User-agent: meta-externalagent
+User-agent: cohere-ai
+User-agent: YouBot
+User-agent: AI2Bot
+Disallow: /
+
+# Allow Search Indexers and Social Bots to fetch root so they read noindex & OG tags
+User-agent: Googlebot
+User-agent: Bingbot
+User-agent: WhatsApp
+User-agent: TelegramBot
+User-agent: Twitterbot
+User-agent: LinkedInBot
+User-agent: Applebot
+User-agent: facebookexternalhit
+User-agent: Facebot
+User-agent: Slackbot
+User-agent: Slackbot-LinkExpanding
+User-agent: Discordbot
+Allow: /$
+Allow: /index.html
+Allow: /favicon.ico
+Allow: /*.png
+Allow: /*.svg
+Disallow: /
+
+# Catch-all for other crawlers
+User-agent: *
+Disallow: /
+`;
+
 export async function onRequest(context) {
+  const url = new URL(context.request.url);
+  const hostname = url.hostname.toLowerCase();
+  const cleanHost = hostname.replace(/^www\./, "");
+  const isAliasDomain = cleanHost === "deanprice.uk" || cleanHost === "deanprice.tr" || cleanHost === "deanprice.ie";
+
+  // Dynamic /robots.txt handling for alias domains vs primary .com
+  if (url.pathname === "/robots.txt") {
+    if (isAliasDomain) {
+      return new Response(ALIAS_ROBOTS_TXT, {
+        status: 200,
+        headers: {
+          "Content-Type": "text/plain; charset=utf-8",
+          "Cache-Control": "public, max-age=3600",
+          "X-Robots-Tag": "noindex, nofollow, noarchive"
+        }
+      });
+    }
+    return await context.next();
+  }
+
   const response = await context.next();
 
   const contentType = response.headers.get("content-type") || "";
@@ -15,8 +81,6 @@ export async function onRequest(context) {
     return response;
   }
 
-  const url = new URL(context.request.url);
-  const hostname = url.hostname.toLowerCase();
   const isDevOrPreview = hostname === "localhost" ||
                          hostname === "127.0.0.1" ||
                          hostname === "::1" ||
@@ -31,23 +95,42 @@ export async function onRequest(context) {
                          hostname.startsWith("172.") ||
                          hostname.startsWith("100.");
 
-  const queryCountry = isDevOrPreview
-    ? url.searchParams.get("country")
-    : null;
-  const rawCountry = queryCountry || context.request.cf?.country || context.request.headers.get("CF-IPCountry") || "";
+  let rawCountry = "";
+  if (cleanHost === "deanprice.uk" || cleanHost.endsWith(".deanprice.uk")) {
+    rawCountry = "GB";
+  } else if (cleanHost === "deanprice.tr" || cleanHost.endsWith(".deanprice.tr")) {
+    rawCountry = "TR";
+  } else if (cleanHost === "deanprice.ie" || cleanHost.endsWith(".deanprice.ie")) {
+    rawCountry = "IE";
+  } else {
+    const queryCountry = isDevOrPreview
+      ? url.searchParams.get("country")
+      : null;
+    rawCountry = queryCountry || context.request.cf?.country || context.request.headers.get("CF-IPCountry") || "";
+  }
+
   const country = /^[A-Za-z0-9]{2}$/.test(rawCountry) ? rawCountry.toUpperCase() : "";
 
-  const transformed = new HTMLRewriter()
-    .on("head", new CountryInjector(country))
-    .transform(response);
+  let rewriter = new HTMLRewriter()
+    .on("head", new CountryInjector(country));
+
+  if (isAliasDomain) {
+    rewriter = rewriter.on('meta[name="robots"]', new RobotsRewriter());
+  }
+
+  const transformed = rewriter.transform(response);
 
   // Prevent upstream CDN caching of personalized Geo HTML
   const headers = new Headers(transformed.headers);
   headers.set("Cache-Control", "private, no-cache, no-store, must-revalidate");
 
-  const isTestOrError = isDevOrPreview && url.searchParams.has("shield");
-  if (isTestOrError) {
-    headers.set("X-Robots-Tag", "noindex, nofollow, noarchive");
+  if (isAliasDomain) {
+    headers.set("X-Robots-Tag", "noindex, nofollow, noarchive, nosnippet");
+  } else {
+    const isTestOrError = isDevOrPreview && url.searchParams.has("shield");
+    if (isTestOrError) {
+      headers.set("X-Robots-Tag", "noindex, nofollow, noarchive");
+    }
   }
 
   return new Response(transformed.body, {
@@ -56,3 +139,4 @@ export async function onRequest(context) {
     headers: headers
   });
 }
+

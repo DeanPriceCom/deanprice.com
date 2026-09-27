@@ -2,7 +2,8 @@
   "version": 1,
   "include": [
     "/",
-    "/index.html"
+    "/index.html",
+    "/robots.txt"
   ],
   "exclude": []
 }

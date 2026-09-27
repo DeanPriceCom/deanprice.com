@@ -24,6 +24,19 @@ func TestExtractCountry(t *testing.T) {
 		{"valid 2-digit number code 12", "http://localhost:8080/?country=12", "12"},
 		{"invalid country code fallback", "http://localhost:8080/?country=TURKEY", ""},
 		{"invalid length fallback", "http://localhost:8080/?country=1", ""},
+		{"host deanprice.tr", "http://deanprice.tr/", "TR"},
+		{"host www.deanprice.tr", "http://www.deanprice.tr/", "TR"},
+		{"host deanprice.tr with port", "http://deanprice.tr:8080/", "TR"},
+		{"host deanprice.ie", "http://deanprice.ie/", "IE"},
+		{"host www.deanprice.ie", "http://www.deanprice.ie/", "IE"},
+		{"host deanprice.ie with port", "http://deanprice.ie:8080/", "IE"},
+		{"host deanprice.uk", "http://deanprice.uk/", "GB"},
+		{"host www.deanprice.uk", "http://www.deanprice.uk/", "GB"},
+		{"host deanprice.uk with port", "http://deanprice.uk:8080/", "GB"},
+		{"alias host overrides query param", "http://deanprice.uk:8080/?country=TR", "GB"},
+		{"alias host tr overrides query param", "http://deanprice.tr:8080/?country=GB", "TR"},
+		{"host deanprice.com empty default", "http://deanprice.com:8080/", ""},
+		{"generic host uses query param", "http://deanprice.com:8080/?country=TR", "TR"},
 	}
 
 	for _, tt := range tests {
@@ -146,5 +159,60 @@ func TestNewDevHandler_NotFound(t *testing.T) {
 	}
 	if !strings.Contains(w.Body.String(), "404") {
 		t.Errorf("expected 404.html content in response body")
+	}
+}
+
+func TestHandleRootHTML_AliasHosts(t *testing.T) {
+	aliasHosts := []string{"http://deanprice.uk/", "http://www.deanprice.uk/", "http://deanprice.tr:8080/", "http://deanprice.ie/"}
+	sampleHTML := []byte(`<!DOCTYPE html><html><head><meta name="robots" content="index, follow"></head><body></body></html>`)
+
+	for _, hostURL := range aliasHosts {
+		t.Run(hostURL, func(t *testing.T) {
+			req := httptest.NewRequest("GET", hostURL, nil)
+			w := httptest.NewRecorder()
+			handleRootHTML(w, req, sampleHTML)
+
+			if got := w.Header().Get("X-Robots-Tag"); got != "noindex, nofollow, noarchive, nosnippet" {
+				t.Errorf("expected X-Robots-Tag: noindex, nofollow, noarchive, nosnippet, got %q", got)
+			}
+			if !strings.Contains(w.Body.String(), `<meta name="robots" content="noindex, nofollow, noarchive, nosnippet">`) {
+				t.Errorf("expected rewritten robots meta tag in body for %s", hostURL)
+			}
+		})
+	}
+}
+
+func TestNewDevHandler_RobotsTxt(t *testing.T) {
+	handler := newDevHandler()
+
+	// 1. Alias host receives dynamic alias robots.txt with noindex header
+	aliasReq := httptest.NewRequest("GET", "http://deanprice.uk/robots.txt", nil)
+	wAlias := httptest.NewRecorder()
+	handler.ServeHTTP(wAlias, aliasReq)
+
+	if wAlias.Code != 200 {
+		t.Errorf("expected 200 for alias robots.txt, got %d", wAlias.Code)
+	}
+	if got := wAlias.Header().Get("X-Robots-Tag"); got != "noindex, nofollow, noarchive" {
+		t.Errorf("expected X-Robots-Tag: noindex, nofollow, noarchive on alias robots.txt, got %q", got)
+	}
+	bodyStr := wAlias.Body.String()
+	if !strings.Contains(bodyStr, "User-agent: GPTBot") || !strings.Contains(bodyStr, "User-agent: Googlebot") {
+		t.Errorf("expected custom alias robots.txt content")
+	}
+
+	// 2. Default host (deanprice.com / localhost) serves static robots.txt
+	defaultReq := httptest.NewRequest("GET", "http://localhost:8080/robots.txt", nil)
+	wDefault := httptest.NewRecorder()
+	handler.ServeHTTP(wDefault, defaultReq)
+
+	if wDefault.Code != 200 {
+		t.Errorf("expected 200 for default robots.txt, got %d", wDefault.Code)
+	}
+	if wDefault.Header().Get("X-Robots-Tag") != "" {
+		t.Errorf("expected no X-Robots-Tag on default robots.txt, got %q", wDefault.Header().Get("X-Robots-Tag"))
+	}
+	if !strings.Contains(wDefault.Body.String(), "DeanPrice.com Robots Exclusion File") {
+		t.Errorf("expected static robots.txt content for default host")
 	}
 }

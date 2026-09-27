@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"mime"
+	"net"
 	"net/http"
 	"os"
 	"path"
@@ -27,7 +28,70 @@ func init() {
 	_ = mime.AddExtensionType(".ico", "image/x-icon")
 }
 
+const aliasRobotsTxt = `# Disallow AI models and training scrapers
+User-agent: GPTBot
+User-agent: ChatGPT-User
+User-agent: ClaudeBot
+User-agent: Claude-User
+User-agent: CCBot
+User-agent: PerplexityBot
+User-agent: Bytespider
+User-agent: Amazonbot
+User-agent: meta-externalagent
+User-agent: cohere-ai
+User-agent: YouBot
+User-agent: AI2Bot
+Disallow: /
+
+# Allow Search Indexers and Social Bots to fetch root so they read noindex & OG tags
+User-agent: Googlebot
+User-agent: Bingbot
+User-agent: WhatsApp
+User-agent: TelegramBot
+User-agent: Twitterbot
+User-agent: LinkedInBot
+User-agent: Applebot
+User-agent: facebookexternalhit
+User-agent: Facebot
+User-agent: Slackbot
+User-agent: Slackbot-LinkExpanding
+User-agent: Discordbot
+Allow: /$
+Allow: /index.html
+Allow: /favicon.ico
+Allow: /*.png
+Allow: /*.svg
+Disallow: /
+
+# Catch-all for other crawlers
+User-agent: *
+Disallow: /
+`
+
+func isAliasHost(host string) bool {
+	if h, _, err := net.SplitHostPort(host); err == nil {
+		host = h
+	}
+	host = strings.TrimPrefix(strings.ToLower(strings.TrimSpace(host)), "www.")
+	return host == "deanprice.uk" || host == "deanprice.tr" || host == "deanprice.ie"
+}
+
 func extractCountry(r *http.Request) string {
+	host := r.Host
+	if h, _, err := net.SplitHostPort(host); err == nil {
+		host = h
+	}
+	host = strings.TrimPrefix(strings.ToLower(strings.TrimSpace(host)), "www.")
+	if strings.HasSuffix(host, ".tr") {
+		return "TR"
+	}
+	if strings.HasSuffix(host, ".ie") {
+		return "IE"
+	}
+	if strings.HasSuffix(host, ".uk") {
+		return "GB"
+	}
+
 	country := r.URL.Query().Get("country")
 	if countryRegex.MatchString(country) {
 		return strings.ToUpper(country)
@@ -64,7 +128,11 @@ func handleRootHTML(w http.ResponseWriter, r *http.Request, htmlBytes []byte) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.Header().Set("Cache-Control", "no-store, no-cache, must-revalidate")
 
-	if r.URL.Query().Has("shield") {
+	if isAliasHost(r.Host) {
+		w.Header().Set("X-Robots-Tag", "noindex, nofollow, noarchive, nosnippet")
+		reRobots := regexp.MustCompile(`<meta name="robots" content="[^"]*">`)
+		injected = reRobots.ReplaceAll(injected, []byte(`<meta name="robots" content="noindex, nofollow, noarchive, nosnippet">`))
+	} else if r.URL.Query().Has("shield") {
 		w.Header().Set("X-Robots-Tag", "noindex, nofollow, noarchive")
 	}
 
@@ -84,6 +152,15 @@ func newDevHandler(customBaseDir ...string) http.Handler {
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		cleanPath := path.Clean(r.URL.Path)
+		if cleanPath == "/robots.txt" && isAliasHost(r.Host) {
+			w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+			w.Header().Set("X-Robots-Tag", "noindex, nofollow, noarchive")
+			w.Header().Set("Cache-Control", "public, max-age=3600")
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte(aliasRobotsTxt))
+			return
+		}
+
 		if cleanPath == "/" || cleanPath == "/index.html" {
 			htmlBytes, err := readServerFile(baseDir, "index.html")
 			if err != nil {
