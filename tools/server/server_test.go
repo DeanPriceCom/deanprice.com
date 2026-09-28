@@ -197,7 +197,7 @@ func TestNewDevHandler_RobotsTxt(t *testing.T) {
 		t.Errorf("expected X-Robots-Tag: noindex, nofollow, noarchive on alias robots.txt, got %q", got)
 	}
 	bodyStr := wAlias.Body.String()
-	if !strings.Contains(bodyStr, "User-agent: GPTBot") || !strings.Contains(bodyStr, "User-agent: Googlebot") {
+	if !strings.Contains(bodyStr, "User-agent: GPTBot") || !strings.Contains(bodyStr, "User-agent: Googlebot") || !strings.Contains(bodyStr, "User-agent: ia_archiver") {
 		t.Errorf("expected custom alias robots.txt content")
 	}
 

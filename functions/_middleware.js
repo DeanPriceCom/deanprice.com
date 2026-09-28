@@ -13,7 +13,7 @@ class RobotsRewriter {
   }
 }
 
-const ALIAS_ROBOTS_TXT = `# Disallow AI models and training scrapers
+const ALIAS_ROBOTS_TXT = `# Disallow AI models, training scrapers, and web archives
 User-agent: GPTBot
 User-agent: ChatGPT-User
 User-agent: ClaudeBot
@@ -26,6 +26,10 @@ User-agent: meta-externalagent
 User-agent: cohere-ai
 User-agent: YouBot
 User-agent: AI2Bot
+User-agent: ia_archiver
+User-agent: archive.org_bot
+User-agent: special_archiver
+User-agent: archive.today
 Disallow: /
 
 # Allow Search Indexers and Social Bots to fetch root so they read noindex & OG tags
