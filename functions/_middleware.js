@@ -61,7 +61,10 @@ export async function onRequest(context) {
   const url = new URL(context.request.url);
   const hostname = url.hostname.toLowerCase();
   const cleanHost = hostname.replace(/^www\./, "");
-  const isAliasDomain = cleanHost === "deanprice.uk" || cleanHost === "deanprice.tr" || cleanHost === "deanprice.ie";
+  const isAliasDomain = cleanHost === "deanprice.uk" ||
+                        cleanHost === "deanprice.tr" ||
+                        cleanHost === "deanprice.ie" ||
+                        cleanHost.endsWith(".pages.dev");
 
   // Dynamic /robots.txt handling for alias domains vs primary .com
   if (url.pathname === "/robots.txt") {

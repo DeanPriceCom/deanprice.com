@@ -77,7 +77,8 @@ func isAliasHost(host string) bool {
 		host = h
 	}
 	host = strings.TrimPrefix(strings.ToLower(strings.TrimSpace(host)), "www.")
-	return host == "deanprice.uk" || host == "deanprice.tr" || host == "deanprice.ie"
+	return host == "deanprice.uk" || host == "deanprice.tr" || host == "deanprice.ie" ||
+		strings.HasSuffix(host, ".pages.dev")
 }
 
 func extractCountry(r *http.Request) string {

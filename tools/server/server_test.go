@@ -163,7 +163,14 @@ func TestNewDevHandler_NotFound(t *testing.T) {
 }
 
 func TestHandleRootHTML_AliasHosts(t *testing.T) {
-	aliasHosts := []string{"http://deanprice.uk/", "http://www.deanprice.uk/", "http://deanprice.tr:8080/", "http://deanprice.ie/"}
+	aliasHosts := []string{
+		"http://deanprice.uk/",
+		"http://www.deanprice.uk/",
+		"http://deanprice.tr:8080/",
+		"http://deanprice.ie/",
+		"http://deanprice-com.pages.dev/",
+		"http://preview-branch.deanprice-com.pages.dev:8080/",
+	}
 	sampleHTML := []byte(`<!DOCTYPE html><html><head><meta name="robots" content="index, follow"></head><body></body></html>`)
 
 	for _, hostURL := range aliasHosts {
@@ -185,20 +192,27 @@ func TestHandleRootHTML_AliasHosts(t *testing.T) {
 func TestNewDevHandler_RobotsTxt(t *testing.T) {
 	handler := newDevHandler()
 
-	// 1. Alias host receives dynamic alias robots.txt with noindex header
-	aliasReq := httptest.NewRequest("GET", "http://deanprice.uk/robots.txt", nil)
-	wAlias := httptest.NewRecorder()
-	handler.ServeHTTP(wAlias, aliasReq)
+	// 1. Alias hosts (including .pages.dev) receive dynamic alias robots.txt with noindex header
+	aliasReqs := []string{
+		"http://deanprice.uk/robots.txt",
+		"http://deanprice-com.pages.dev/robots.txt",
+		"http://preview.pages.dev/robots.txt",
+	}
+	for _, rawURL := range aliasReqs {
+		aliasReq := httptest.NewRequest("GET", rawURL, nil)
+		wAlias := httptest.NewRecorder()
+		handler.ServeHTTP(wAlias, aliasReq)
 
-	if wAlias.Code != 200 {
-		t.Errorf("expected 200 for alias robots.txt, got %d", wAlias.Code)
-	}
-	if got := wAlias.Header().Get("X-Robots-Tag"); got != "noindex, nofollow, noarchive" {
-		t.Errorf("expected X-Robots-Tag: noindex, nofollow, noarchive on alias robots.txt, got %q", got)
-	}
-	bodyStr := wAlias.Body.String()
-	if !strings.Contains(bodyStr, "User-agent: GPTBot") || !strings.Contains(bodyStr, "User-agent: Googlebot") || !strings.Contains(bodyStr, "User-agent: ia_archiver") {
-		t.Errorf("expected custom alias robots.txt content")
+		if wAlias.Code != 200 {
+			t.Errorf("expected 200 for alias robots.txt on %s, got %d", rawURL, wAlias.Code)
+		}
+		if got := wAlias.Header().Get("X-Robots-Tag"); got != "noindex, nofollow, noarchive" {
+			t.Errorf("expected X-Robots-Tag: noindex, nofollow, noarchive on %s, got %q", rawURL, got)
+		}
+		bodyStr := wAlias.Body.String()
+		if !strings.Contains(bodyStr, "User-agent: GPTBot") || !strings.Contains(bodyStr, "User-agent: Googlebot") || !strings.Contains(bodyStr, "User-agent: ia_archiver") {
+			t.Errorf("expected custom alias robots.txt content on %s", rawURL)
+		}
 	}
 
 	// 2. Default host (deanprice.com / localhost) serves static robots.txt
