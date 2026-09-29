@@ -451,7 +451,6 @@
             color: inherit;
             display: inline-block;
             padding: 2px 4px;
-            margin: 0 -4px;
             cursor: pointer;
             animation: blink 1s step-end infinite;
             transition: color 0.2s ease;
@@ -563,16 +562,17 @@
         </main>
         <footer>
             <span translate="no" data-nosnippet>
-                <span class="footer-item">MSc Computer Science&nbsp;<a href="/easter-egg" class="blinking-cursor"
-                        target="_blank" rel="noopener" aria-label="Easter egg (opens in a new tab)">|</a>&nbsp;<a
-                        href="https://orcid.org/0009-0001-4937-2409" target="_blank" rel="noopener me"
-                        aria-label="ORCID profile (opens in a new tab)">ORCID</a><span
+                <span class="footer-item">MSc Computer Science<span class="sep-pipe"
+                        aria-hidden="true">&nbsp;|&nbsp;</span><a href="https://orcid.org/0009-0001-4937-2409"
+                        target="_blank" rel="noopener me" aria-label="ORCID profile (opens in a new tab)">ORCID</a><span
                         class="desktop-pipe" aria-hidden="true">&nbsp;|</span></span>
                 <span class="footer-item">ID: Yoti &amp; Post Office EasyID<span class="desktop-pipe"
                         aria-hidden="true">&nbsp;|</span></span>
                 <span class="footer-item">
                     <a href="https://github.com/DeanPriceCom/deanprice.com" target="_blank" rel="noopener"
-                        aria-label="Source on GitHub (opens in a new tab)">Source on GitHub</a>
+                        aria-label="Source on GitHub (opens in a new tab)">Source on GitHub</a><span
+                        aria-hidden="true">&nbsp;</span><a href="/easter-egg" class="blinking-cursor"
+                        target="_blank" rel="noopener" aria-label="Easter egg (opens in a new tab)">|</a>
                 </span>
             </span>
         </footer>
