@@ -15,7 +15,15 @@
 
     <link rel="alternate" type="text/plain" title="LLM Context" href="/llms.txt">
 
-    <!-- Decentralized Identity & Social Graph (RelMeAuth / IndieWeb) -->
+    <link rel="manifest" href="/manifest.json">
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+    <link rel="mask-icon" href="/safari-pinned-tab.svg" color="#4363b0">
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+    <link rel="icon" href="/favicon.ico" sizes="any">
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="96x96" href="/favicon-96x96.png">
+
     <link rel="me" href="https://www.facebook.com/DeanPriceCom">
     <link rel="me" href="https://www.instagram.com/deanpricecom">
     <link rel="me" href="https://www.threads.com/@deanpricecom">
@@ -26,15 +34,6 @@
     <link rel="me" href="https://www.wikidata.org/wiki/Q140167209">
     <link rel="me" href="https://github.com/DeanPriceCom">
     <link rel="me" href="https://soundcloud.com/deanpricecom">
-
-    <link rel="manifest" href="/manifest.json">
-    <link rel="apple-touch-icon" href="/apple-touch-icon.png">
-    <link rel="mask-icon" href="/safari-pinned-tab.svg" color="#4363b0">
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
-    <link rel="icon" href="/favicon.ico" sizes="any">
-    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
-    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
-    <link rel="icon" type="image/png" sizes="96x96" href="/favicon-96x96.png">
 
     <meta property="og:title" content="Dean Price">
     <meta property="og:site_name" content="Dean Price">
@@ -354,7 +353,6 @@
                 margin: 4px 0;
             }
 
-            /* Mobile optical alignment: 'Source on GitHub' is dead-center on line 3 */
             footer .blinking-cursor {
                 margin-right: -8px;
             }
@@ -449,41 +447,44 @@
             font-size: 1.2rem;
         }
 
-        /* Blinking terminal cursor Easter egg */
         .blinking-cursor {
             text-decoration: none;
             color: inherit;
             display: inline-block;
-            position: relative; /* Anchor for out-of-flow hit target */
-            padding: 0;         /* 0 layout padding = exact spacing & 0 center drift */
+            position: relative;
+            padding: 0;
             cursor: pointer;
             animation: blink 1s step-end infinite;
             transition: color 0.2s ease;
         }
 
-        /* Invisible tap target: out of flow, 0 impact on text-align: center */
         .blinking-cursor::after {
             content: '';
             position: absolute;
             top: -6px;
             bottom: -6px;
             left: 0;
-            right: -16px;       /* 16px effortless tap zone to the right */
+            right: -16px;
         }
 
         @keyframes blink {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0; }
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0;
+            }
         }
 
-        /* Universal keyboard focus state (all hardware types: desktop, touch laptops, tablets) */
         .blinking-cursor:focus-visible {
             animation: none;
             opacity: 1;
             color: #1e3366;
         }
 
-        /* Mouse hover state (fine-pointer devices only) */
         @media (hover: hover) and (pointer: fine) {
             .blinking-cursor:hover {
                 animation: none;
@@ -492,7 +493,6 @@
             }
         }
 
-        /* Motion accessibility */
         @media (prefers-reduced-motion: reduce) {
             .blinking-cursor {
                 animation: none;
@@ -586,8 +586,8 @@
                 <span class="footer-item">
                     <a href="https://github.com/DeanPriceCom/deanprice.com" target="_blank" rel="noopener"
                         aria-label="Source on GitHub (opens in a new tab)">Source on GitHub</a><span
-                        aria-hidden="true">&nbsp;</span><a href="/easter-egg" class="blinking-cursor"
-                        target="_blank" rel="noopener" aria-label="Easter egg (opens in a new tab)">|</a>
+                        aria-hidden="true">&nbsp;</span><a href="/easter-egg" class="blinking-cursor" target="_blank"
+                        rel="noopener" aria-label="Easter egg (opens in a new tab)">|</a>
                 </span>
             </span>
         </footer>
