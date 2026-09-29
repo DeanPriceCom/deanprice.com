@@ -42,6 +42,9 @@ self.addEventListener('fetch', (event) => {
 
   const url = new URL(event.request.url);
 
+  // Allow Cloudflare edge to handle Easter egg redirect natively
+  if (url.pathname.startsWith('/easter-egg')) return;
+
   // Navigation requests (HTML document): Network-First with tight timeout fallback
   if (event.request.mode === 'navigate' || url.pathname === '/' || url.pathname === '/index.html') {
     const TIMEOUT_MS = 1200;

@@ -15,6 +15,18 @@
 
     <link rel="alternate" type="text/plain" title="LLM Context" href="/llms.txt">
 
+    <!-- Decentralized Identity & Social Graph (RelMeAuth / IndieWeb) -->
+    <link rel="me" href="https://www.facebook.com/DeanPriceCom">
+    <link rel="me" href="https://www.instagram.com/deanpricecom">
+    <link rel="me" href="https://www.threads.com/@deanpricecom">
+    <link rel="me" href="https://www.youtube.com/@DeanPriceCom">
+    <link rel="me" href="https://twitter.com/DeanPriceCom">
+    <link rel="me" href="https://bsky.app/profile/deanprice.com">
+    <link rel="me" href="https://orcid.org/0009-0001-4937-2409">
+    <link rel="me" href="https://www.wikidata.org/wiki/Q140167209">
+    <link rel="me" href="https://github.com/DeanPriceCom">
+    <link rel="me" href="https://soundcloud.com/deanpricecom">
+
     <link rel="manifest" href="/manifest.json">
     <link rel="apple-touch-icon" href="/apple-touch-icon.png">
     <link rel="mask-icon" href="/safari-pinned-tab.svg" color="#4363b0">
@@ -431,6 +443,48 @@
             line-height: 1.6;
             font-size: 1.2rem;
         }
+
+        /* Blinking terminal cursor Easter egg */
+        .blinking-cursor {
+            font-weight: bold;
+            text-decoration: none;
+            color: inherit;
+            display: inline-block;
+            padding: 2px 4px;
+            margin: 0 -4px;
+            cursor: pointer;
+            animation: blink 1s step-end infinite;
+            transition: color 0.2s ease;
+        }
+
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0; }
+        }
+
+        /* Universal keyboard focus state (all hardware types: desktop, touch laptops, tablets) */
+        .blinking-cursor:focus-visible {
+            animation: none;
+            opacity: 1;
+            color: #1e3366;
+        }
+
+        /* Mouse hover state (fine-pointer devices only) */
+        @media (hover: hover) and (pointer: fine) {
+            .blinking-cursor:hover {
+                animation: none;
+                opacity: 1;
+                color: #1e3366;
+            }
+        }
+
+        /* Motion accessibility */
+        @media (prefers-reduced-motion: reduce) {
+            .blinking-cursor {
+                animation: none;
+                opacity: 1;
+            }
+        }
     </style>
 </head>
 
@@ -509,9 +563,10 @@
         </main>
         <footer>
             <span translate="no" data-nosnippet>
-                <span class="footer-item">MSc Computer Science<span class="sep-pipe"
-                        aria-hidden="true">&nbsp;|&nbsp;</span><a href="https://orcid.org/0009-0001-4937-2409"
-                        target="_blank" rel="noopener me" aria-label="ORCID profile (opens in a new tab)">ORCID</a><span
+                <span class="footer-item">MSc Computer Science&nbsp;<a href="/easter-egg" class="blinking-cursor"
+                        target="_blank" rel="noopener" aria-label="Easter egg (opens in a new tab)">|</a>&nbsp;<a
+                        href="https://orcid.org/0009-0001-4937-2409" target="_blank" rel="noopener me"
+                        aria-label="ORCID profile (opens in a new tab)">ORCID</a><span
                         class="desktop-pipe" aria-hidden="true">&nbsp;|</span></span>
                 <span class="footer-item">ID: Yoti &amp; Post Office EasyID<span class="desktop-pipe"
                         aria-hidden="true">&nbsp;|</span></span>
