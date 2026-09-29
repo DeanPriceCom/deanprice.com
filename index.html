@@ -450,10 +450,21 @@
             text-decoration: none;
             color: inherit;
             display: inline-block;
-            padding: 2px 4px;
+            position: relative; /* Anchor for out-of-flow hit target */
+            padding: 0;         /* 0 layout padding = exact spacing & 0 center drift */
             cursor: pointer;
             animation: blink 1s step-end infinite;
             transition: color 0.2s ease;
+        }
+
+        /* Invisible tap target: out of flow, 0 impact on text-align: center */
+        .blinking-cursor::after {
+            content: '';
+            position: absolute;
+            top: -6px;
+            bottom: -6px;
+            left: 0;
+            right: -16px;       /* 16px effortless tap zone to the right */
         }
 
         @keyframes blink {
