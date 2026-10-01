@@ -35,4 +35,7 @@ dist/
 .tools/
 tinygo/
 binaryen*/
-*.tar.gz
+*.tar.gz
+
+# CUSTOM: Cloudflare Wrangler cache & state
+.wrangler/
