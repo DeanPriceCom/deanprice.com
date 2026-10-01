@@ -4,7 +4,7 @@
   X-Content-Type-Options: nosniff
   Referrer-Policy: strict-origin-when-cross-origin
   Cross-Origin-Opener-Policy: same-origin
-  Content-Security-Policy: default-src 'self'; script-src 'self' 'wasm-unsafe-eval' 'sha256-ymaKeZxKuMhiUoA4mICK4U4pFD/Sp7V7Ib7Zz0brrKg='; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data:; connect-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; require-trusted-types-for 'script'; trusted-types swPolicy;
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'wasm-unsafe-eval' 'sha256-Pq2Qdtdv4M2ebyzaCVCSFRNnhpr4EY2wHYu0V8u0lNE='; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data:; connect-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; require-trusted-types-for 'script'; trusted-types swPolicy;
   Permissions-Policy: camera=(), microphone=(), geolocation=(), browsing-topics=()
 
 # 2. WASM ENGINE & EXECUTOR

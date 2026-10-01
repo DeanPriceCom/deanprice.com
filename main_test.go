@@ -289,10 +289,8 @@ func TestDevHostSyncIntegrity(t *testing.T) {
 		".local",
 		".lan",
 		".ts.net",
-		"192.168.",
-		"10.",
-		"172.",
-		"100.",
+		"PRIVATE_IPV4_REGEX",
+		`^(?:10(?:\.\d{1,3}){3}|192\.168(?:\.\d{1,3}){2}|172\.(?:1[6-9]|2\d|3[01])(?:\.\d{1,3}){2}|100\.(?:6[4-9]|[7-9]\d|1[01]\d|12[0-7])(?:\.\d{1,3}){2})$`,
 	}
 
 	for _, pattern := range requiredHostPatterns {
@@ -318,13 +316,36 @@ func TestDevHostSyncIntegrity(t *testing.T) {
 		{"myphone.local", true},
 		{"laptop.lan", true},
 		{"node.ts.net", true},
-		{"192.168.1.50", true},
+		// RFC 1918 10.0.0.0/8
 		{"10.0.0.1", true},
+		{"10.255.255.254", true},
+		// RFC 1918 172.16.0.0/12
 		{"172.16.0.1", true},
+		{"172.31.255.254", true},
+		{"172.15.255.255", false},
+		{"172.32.0.1", false},
+		// RFC 1918 192.168.0.0/16
+		{"192.168.1.50", true},
+		{"192.168.0.1", true},
+		// RFC 6598 100.64.0.0/10
 		{"100.64.0.1", true},
+		{"100.127.255.254", true},
+		{"100.63.255.255", false},
+		{"100.128.0.1", false},
+		// Public domains & spoof attempts
 		{"deanprice.com", false},
 		{"evil-scraper.com", false},
 		{"example.com", false},
+		{"10.com", false},
+		{"100.com", false},
+		{"172.com", false},
+		{"192.168.com", false},
+		{"10.0.0.1.nip.io", false},
+		// Malformed & edge cases
+		{"10.0.0", false},
+		{"10.0.0.0.1", false},
+		{"10.01.0.1", false},
+		{"10.300.0.1", false},
 	}
 
 	for _, tc := range testDevHosts {

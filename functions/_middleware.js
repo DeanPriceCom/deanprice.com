@@ -57,6 +57,8 @@ User-agent: *
 Disallow: /
 `;
 
+const PRIVATE_IPV4_REGEX = /^(?:10(?:\.\d{1,3}){3}|192\.168(?:\.\d{1,3}){2}|172\.(?:1[6-9]|2\d|3[01])(?:\.\d{1,3}){2}|100\.(?:6[4-9]|[7-9]\d|1[01]\d|12[0-7])(?:\.\d{1,3}){2})$/;
+
 export async function onRequest(context) {
   const url = new URL(context.request.url);
   const hostname = url.hostname.toLowerCase();
@@ -97,10 +99,7 @@ export async function onRequest(context) {
                          hostname.endsWith(".local") ||
                          hostname.endsWith(".lan") ||
                          hostname.endsWith(".ts.net") ||
-                         hostname.startsWith("192.168.") ||
-                         hostname.startsWith("10.") ||
-                         hostname.startsWith("172.") ||
-                         hostname.startsWith("100.");
+                         PRIVATE_IPV4_REGEX.test(hostname);
 
   let rawCountry = "";
   if (cleanHost === "deanprice.uk" || cleanHost.endsWith(".deanprice.uk")) {
