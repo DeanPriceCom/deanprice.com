@@ -6,7 +6,7 @@
 [![WebAssembly](https://img.shields.io/badge/WebAssembly-WASM-654FF0?logo=webassembly&logoColor=white)](https://webassembly.org)
 [![Cloudflare](https://img.shields.io/badge/Cloudflare-Pages_&_Edge_Functions-F38020?logo=cloudflare&logoColor=white)](https://pages.cloudflare.com)
 
-A deliberately over-engineered personal identity card and systems sandbox. Engineered to explore the limits of TinyGo WebAssembly binary compression (<42 KB), Cloudflare Edge stream rewriting, and client-side scraper mitigation—without sacrificing millisecond render times or accessibility.
+A deliberately over-engineered personal identity card and systems sandbox. Engineered to explore the limits of TinyGo WebAssembly binary compression (sub-50 KB), Cloudflare Edge stream rewriting, and client-side scraper mitigation—without sacrificing millisecond render times or accessibility.
 
 🌐 **Live Website:** [https://www.deanprice.com](https://www.deanprice.com/)
 
