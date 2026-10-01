@@ -54,7 +54,7 @@ A deliberately over-engineered personal identity card and systems sandbox. Engin
 
 ## 🧪 Local Testing & Verification
 
-Run the test suite across all 15 host environments and 3 localisation regions:
+Run the full test suite across all production domains, dev environments, and regional locales:
 
 ```bash
 # Run unit tests with cache bypassed
