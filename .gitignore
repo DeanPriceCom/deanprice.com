@@ -28,7 +28,6 @@ go.work.sum
 data.go
 internal/contact/data.go
 main.wasm
-wasm_exec.js
 
 # CUSTOM: Build distribution & toolchains
 dist/

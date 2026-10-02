@@ -23,14 +23,23 @@ function truncate(str, maxLen) {
   return s.length > maxLen ? s.slice(0, maxLen - 3) + "..." : s;
 }
 
-function isExtensionOrNoise(filename, message, blockedURI) {
-  const fileStr = String(filename || "");
+function isExtensionOrNoise(filename, message, blockedURI, stack) {
   const msgStr = String(message || "");
-  const uriStr = String(blockedURI || "");
-
   if (msgStr === "Script error.") return true;
-  if (fileStr.includes("chrome-extension://") || fileStr.includes("moz-extension://") || fileStr.includes("safari-web-extension://")) return true;
-  if (uriStr.includes("chrome-extension://") || uriStr.includes("moz-extension://") || uriStr.includes("safari-web-extension://")) return true;
+
+  const targets = [
+    String(filename || ""),
+    msgStr,
+    String(blockedURI || ""),
+    String(stack || "")
+  ];
+
+  for (const s of targets) {
+    if (!s) continue;
+    if (s.includes("extension:") || s.includes("cloudflareinsights.com")) {
+      return true;
+    }
+  }
 
   return false;
 }
@@ -43,7 +52,7 @@ function normalizeReports(rawJson) {
     for (const item of rawJson) {
       if (item && item.type === "csp-violation" && item.body) {
         const body = item.body;
-        if (isExtensionOrNoise("", "", body.blockedURL)) continue;
+        if (isExtensionOrNoise(body.sourceFile || "", "", body.blockedURL || "", "")) continue;
         reports.push({
           category: "csp",
           type: "csp_violation",
@@ -63,7 +72,8 @@ function normalizeReports(rawJson) {
   if (rawJson && rawJson["csp-report"]) {
     const csp = rawJson["csp-report"];
     const blockedURI = csp["blocked-uri"] || "";
-    if (!isExtensionOrNoise("", "", blockedURI)) {
+    const sourceFile = csp["source-file"] || csp["source_file"] || "";
+    if (!isExtensionOrNoise(sourceFile, "", blockedURI, "")) {
       reports.push({
         category: "csp",
         type: "legacy_csp_report",
@@ -80,29 +90,36 @@ function normalizeReports(rawJson) {
 
   // 3. Custom Telemetry (Runtime errors, WASM traps, Service Worker errors)
   if (rawJson && typeof rawJson === "object") {
-    const type = rawJson.type || "unknown_error";
-    const message = rawJson.message || rawJson.reason || rawJson.detail || "Unknown error";
+    const type = rawJson.type;
+    const message = rawJson.message || rawJson.reason || rawJson.detail;
     const filename = rawJson.filename || "";
     const lineno = rawJson.lineno || 0;
     const colno = rawJson.colno || 0;
     const stack = rawJson.stack || "";
     const url = rawJson.url || "/";
 
-    if (isExtensionOrNoise(filename, message, "")) return reports;
+    // Drop empty noise or scanner probes lacking any diagnostic details
+    if (!message && !stack) return reports;
+
+    const resolvedType = type || "unknown_error";
+    const resolvedMessage = message || "Unknown error";
+
+    if (isExtensionOrNoise(filename, resolvedMessage, "", stack)) return reports;
+    if (resolvedType === "unknown_error" && resolvedMessage === "Unknown error" && !stack) return reports;
 
     let severity = "red";
-    if (type === "unhandled_rejection") {
+    if (resolvedType === "unhandled_rejection") {
       severity = "yellow";
     }
 
     const loc = filename ? `${filename}:${lineno}:${colno}` : "unknown";
     reports.push({
       category: "runtime",
-      type: type,
+      type: resolvedType,
       url: url,
-      message: message,
+      message: resolvedMessage,
       location: loc,
-      details: stack ? `Location: ${loc}\n\nStack:\n${stack}` : `Location: ${loc}\nMessage: ${message}`,
+      details: stack ? `Location: ${loc}\n\nStack:\n${stack}` : `Location: ${loc}\nMessage: ${resolvedMessage}`,
       severity: severity
     });
   }
