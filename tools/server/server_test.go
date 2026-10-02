@@ -195,6 +195,8 @@ func TestNewDevHandler_RobotsTxt(t *testing.T) {
 	// 1. Alias hosts (including .pages.dev) receive dynamic alias robots.txt with noindex header
 	aliasReqs := []string{
 		"http://deanprice.uk/robots.txt",
+		"http://deanprice.ie/robots.txt",
+		"http://deanprice.tr/robots.txt",
 		"http://deanprice-com.pages.dev/robots.txt",
 		"http://preview.pages.dev/robots.txt",
 	}
@@ -212,6 +214,12 @@ func TestNewDevHandler_RobotsTxt(t *testing.T) {
 		bodyStr := wAlias.Body.String()
 		if !strings.Contains(bodyStr, "User-agent: GPTBot") || !strings.Contains(bodyStr, "User-agent: Googlebot") || !strings.Contains(bodyStr, "User-agent: ia_archiver") {
 			t.Errorf("expected custom alias robots.txt content on %s", rawURL)
+		}
+		if !strings.Contains(bodyStr, "Allow: /main.wasm") ||
+			!strings.Contains(bodyStr, "Allow: /wasm_exec.js") ||
+			!strings.Contains(bodyStr, "Allow: /sw.js") ||
+			!strings.Contains(bodyStr, "Allow: /manifest.json") {
+			t.Errorf("expected essential Allow directives for executables/manifest on %s", rawURL)
 		}
 	}
 

@@ -47,9 +47,13 @@ User-agent: Slackbot-LinkExpanding
 User-agent: Discordbot
 Allow: /$
 Allow: /index.html
+Allow: /manifest.json
 Allow: /favicon.ico
 Allow: /*.png
 Allow: /*.svg
+Allow: /main.wasm
+Allow: /wasm_exec.js
+Allow: /sw.js
 Disallow: /
 
 # Catch-all for other crawlers

@@ -413,3 +413,66 @@ func TestIconRowResponsiveIntegrity(t *testing.T) {
 		t.Errorf("index.html missing breakout sizing 'calc(100%% + 24px)' on #iconrow")
 	}
 }
+
+func TestRobotsNoindexRouteParity(t *testing.T) {
+	// Enforce that any route in _headers carrying "X-Robots-Tag: noindex"
+	// is explicitly allowed in robots.txt, functions/_middleware.js, and tools/server/main.go.
+	// Otherwise, crawlers will be blocked by robots.txt from fetching the route,
+	// preventing them from reading the HTTP header and leading to bare URL indexation.
+
+	headersBytes, err := os.ReadFile("_headers")
+	if err != nil {
+		t.Fatalf("Failed to read _headers: %v", err)
+	}
+
+	robotsBytes, err := os.ReadFile("robots.txt")
+	if err != nil {
+		t.Fatalf("Failed to read robots.txt: %v", err)
+	}
+	robotsStr := string(robotsBytes)
+
+	middlewareBytes, err := os.ReadFile("functions/_middleware.js")
+	if err != nil {
+		t.Fatalf("Failed to read functions/_middleware.js: %v", err)
+	}
+	middlewareStr := string(middlewareBytes)
+
+	serverBytes, err := os.ReadFile("tools/server/main.go")
+	if err != nil {
+		t.Fatalf("Failed to read tools/server/main.go: %v", err)
+	}
+	serverStr := string(serverBytes)
+
+	lines := strings.Split(string(headersBytes), "\n")
+	var currentRoute string
+	var noindexRoutes []string
+
+	for _, line := range lines {
+		trimmed := strings.TrimSpace(line)
+		if strings.HasPrefix(trimmed, "/") {
+			currentRoute = strings.Fields(trimmed)[0]
+		} else if strings.HasPrefix(trimmed, "X-Robots-Tag:") && strings.Contains(strings.ToLower(trimmed), "noindex") {
+			if currentRoute != "" {
+				noindexRoutes = append(noindexRoutes, currentRoute)
+			}
+		}
+	}
+
+	if len(noindexRoutes) == 0 {
+		t.Fatalf("Expected to find routes with X-Robots-Tag: noindex in _headers, found none")
+	}
+
+	for _, route := range noindexRoutes {
+		allowDirective := "Allow: " + route
+
+		if !strings.Contains(robotsStr, allowDirective) {
+			t.Errorf("robots.txt missing %q for route with X-Robots-Tag: noindex in _headers (triggers robots.txt vs noindex trap)", allowDirective)
+		}
+		if !strings.Contains(middlewareStr, allowDirective) {
+			t.Errorf("functions/_middleware.js ALIAS_ROBOTS_TXT missing %q for route with X-Robots-Tag: noindex in _headers (triggers robots.txt vs noindex trap)", allowDirective)
+		}
+		if !strings.Contains(serverStr, allowDirective) {
+			t.Errorf("tools/server/main.go aliasRobotsTxt missing %q for route with X-Robots-Tag: noindex in _headers (triggers robots.txt vs noindex trap)", allowDirective)
+		}
+	}
+}
