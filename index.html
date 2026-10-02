@@ -626,7 +626,7 @@
             if (!navigator.onLine || !navigator.sendBeacon) return;
             try {
                 navigator.sendBeacon('/api/report', JSON.stringify(data));
-            } catch (e) {}
+            } catch (e) { }
         }
 
         window.addEventListener('error', function (event) {
