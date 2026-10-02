@@ -11,12 +11,31 @@ const ASSETS_TO_CACHE = [
   '/favicon.svg'
 ];
 
+function reportSWError(type, detail) {
+  if (!navigator.onLine) return;
+  fetch('/api/report', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      type: type,
+      detail: detail,
+      url: '/sw.js',
+      ts: Date.now()
+    }),
+    keepalive: true
+  }).catch(() => {});
+}
+
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(STATIC_CACHE).then((cache) => {
       console.log('[Service Worker] Caching core assets');
       return cache.addAll(ASSETS_TO_CACHE);
     }).then(() => self.skipWaiting())
+    .catch((err) => {
+      reportSWError('sw_install_failure', err && err.message || String(err));
+      throw err;
+    })
   );
 });
 

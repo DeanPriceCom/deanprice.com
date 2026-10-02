@@ -622,6 +622,38 @@
     </div>
     <script src="/wasm_exec.js" defer></script>
     <script id="wasm-engine">
+        function sendReport(data) {
+            if (!navigator.onLine || !navigator.sendBeacon) return;
+            try {
+                navigator.sendBeacon('/api/report', JSON.stringify(data));
+            } catch (e) {}
+        }
+
+        window.addEventListener('error', function (event) {
+            if (!event.filename || event.filename.indexOf('extension:') !== -1 || event.message === 'Script error.') return;
+            sendReport({
+                type: 'uncaught_error',
+                message: event.message,
+                filename: event.filename,
+                lineno: event.lineno,
+                colno: event.colno,
+                stack: event.error ? event.error.stack : null,
+                url: window.location.pathname,
+                ts: Date.now()
+            });
+        });
+
+        window.addEventListener('unhandledrejection', function (event) {
+            var reason = event.reason && (event.reason.message || event.reason.stack) || String(event.reason);
+            if (!reason || reason.indexOf('extension:') !== -1) return;
+            sendReport({
+                type: 'unhandled_rejection',
+                reason: reason,
+                url: window.location.pathname,
+                ts: Date.now()
+            });
+        });
+
         // Pre-Wasm Interaction Guard (Capturing Phase)
         ['click', 'auxclick', 'contextmenu', 'dragstart'].forEach(function (eventType) {
             document.addEventListener(eventType, function (e) {
@@ -727,9 +759,21 @@
                             iconrow.classList.add('ready');
                         }
                     }).catch(function (err) {
+                        sendReport({
+                            type: 'wasm_hydration_error',
+                            message: err && err.message || String(err),
+                            url: window.location.pathname,
+                            ts: Date.now()
+                        });
                         triggerShield('blocked');
                     });
                 } catch (criticalError) {
+                    sendReport({
+                        type: 'wasm_hydration_error',
+                        message: criticalError && criticalError.message || String(criticalError),
+                        url: window.location.pathname,
+                        ts: Date.now()
+                    });
                     triggerShield('blocked');
                 }
             }
@@ -758,6 +802,12 @@
                     })
                     .catch(function (error) {
                         console.warn('[PWA] Service Worker registration failed:', error);
+                        sendReport({
+                            type: 'sw_registration_failure',
+                            message: error && error.message || String(error),
+                            url: window.location.pathname,
+                            ts: Date.now()
+                        });
                     });
             });
         }

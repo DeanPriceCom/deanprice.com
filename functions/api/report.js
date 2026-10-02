@@ -1,0 +1,248 @@
+/**
+ * First-Party Error & CSP Function Beacon
+ * Endpoint: POST /api/report
+ *
+ * Receives:
+ * 1. W3C Reporting API (application/reports+json)
+ * 2. Legacy CSP Reports (application/csp-report)
+ * 3. Client & SW Telemetry (application/json or text/plain from navigator.sendBeacon/fetch)
+ */
+
+const MAX_PAYLOAD_BYTES = 10 * 1024; // 10 KB
+
+const COLOR_MAP = {
+  red: 14427686,    // 0xDC2626 - Uncaught Errors & WASM Panics
+  amber: 16096779,  // 0xF59E0B - CSP & Policy Violations
+  yellow: 16498468, // 0xFBBF24 - Unhandled Rejections
+  gray: 7041664     // 0x6B7280 - Generic / Informational
+};
+
+function truncate(str, maxLen) {
+  if (!str) return "";
+  const s = String(str);
+  return s.length > maxLen ? s.slice(0, maxLen - 3) + "..." : s;
+}
+
+function isExtensionOrNoise(filename, message, blockedURI) {
+  const fileStr = String(filename || "");
+  const msgStr = String(message || "");
+  const uriStr = String(blockedURI || "");
+
+  if (msgStr === "Script error.") return true;
+  if (fileStr.includes("chrome-extension://") || fileStr.includes("moz-extension://") || fileStr.includes("safari-web-extension://")) return true;
+  if (uriStr.includes("chrome-extension://") || uriStr.includes("moz-extension://") || uriStr.includes("safari-web-extension://")) return true;
+
+  return false;
+}
+
+function normalizeReports(rawJson) {
+  const reports = [];
+
+  // 1. W3C Reporting API (Array)
+  if (Array.isArray(rawJson)) {
+    for (const item of rawJson) {
+      if (item && item.type === "csp-violation" && item.body) {
+        const body = item.body;
+        if (isExtensionOrNoise("", "", body.blockedURL)) continue;
+        reports.push({
+          category: "csp",
+          type: "csp_violation",
+          url: body.documentURL || "",
+          directive: body.effectiveDirective || body.violatedDirective || "",
+          blocked: body.blockedURL || "",
+          message: `CSP Violation: ${body.effectiveDirective || "directive"} blocked ${body.blockedURL || "resource"}`,
+          details: `Directive: ${body.effectiveDirective || ""}\nBlocked URL: ${body.blockedURL || ""}\nSource: ${body.sourceFile || ""}:${body.lineNumber || ""}:${body.columnNumber || ""}`,
+          severity: "amber"
+        });
+      }
+    }
+    return reports;
+  }
+
+  // 2. Legacy CSP Report
+  if (rawJson && rawJson["csp-report"]) {
+    const csp = rawJson["csp-report"];
+    const blockedURI = csp["blocked-uri"] || "";
+    if (!isExtensionOrNoise("", "", blockedURI)) {
+      reports.push({
+        category: "csp",
+        type: "legacy_csp_report",
+        url: csp["document-uri"] || "",
+        directive: csp["violated-directive"] || csp["effective-directive"] || "",
+        blocked: blockedURI,
+        message: `CSP Violation: ${csp["violated-directive"] || "directive"} blocked ${blockedURI}`,
+        details: `Directive: ${csp["violated-directive"] || ""}\nBlocked URI: ${blockedURI}\nDocument: ${csp["document-uri"] || ""}`,
+        severity: "amber"
+      });
+    }
+    return reports;
+  }
+
+  // 3. Custom Telemetry (Runtime errors, WASM traps, Service Worker errors)
+  if (rawJson && typeof rawJson === "object") {
+    const type = rawJson.type || "unknown_error";
+    const message = rawJson.message || rawJson.reason || rawJson.detail || "Unknown error";
+    const filename = rawJson.filename || "";
+    const lineno = rawJson.lineno || 0;
+    const colno = rawJson.colno || 0;
+    const stack = rawJson.stack || "";
+    const url = rawJson.url || "/";
+
+    if (isExtensionOrNoise(filename, message, "")) return reports;
+
+    let severity = "red";
+    if (type === "unhandled_rejection") {
+      severity = "yellow";
+    }
+
+    const loc = filename ? `${filename}:${lineno}:${colno}` : "unknown";
+    reports.push({
+      category: "runtime",
+      type: type,
+      url: url,
+      message: message,
+      location: loc,
+      details: stack ? `Location: ${loc}\n\nStack:\n${stack}` : `Location: ${loc}\nMessage: ${message}`,
+      severity: severity
+    });
+  }
+
+  return reports;
+}
+
+async function sendDiscordNotification(webhookUrl, report) {
+  if (!webhookUrl) return;
+
+  const color = COLOR_MAP[report.severity] || COLOR_MAP.gray;
+  const fields = [
+    { name: "Type", value: `\`${truncate(report.type, 100)}\``, inline: true },
+    { name: "URL / Path", value: `\`${truncate(report.url || "/", 100)}\``, inline: true }
+  ];
+
+  if (report.location) {
+    fields.push({ name: "Location", value: `\`${truncate(report.location, 150)}\``, inline: false });
+  }
+  if (report.directive) {
+    fields.push({ name: "Directive", value: `\`${truncate(report.directive, 150)}\``, inline: true });
+  }
+  if (report.blocked) {
+    fields.push({ name: "Blocked Resource", value: `\`${truncate(report.blocked, 200)}\``, inline: false });
+  }
+
+  const detailContent = truncate(report.details || report.message, 1000);
+  if (detailContent) {
+    fields.push({
+      name: "Details",
+      value: `\`\`\`\n${detailContent}\n\`\`\``,
+      inline: false
+    });
+  }
+
+  const payload = {
+    username: "DeanPrice.com Sentinel",
+    embeds: [
+      {
+        title: `🚨 ${truncate(report.message, 250)}`,
+        color: color,
+        fields: fields,
+        timestamp: new Date().toISOString(),
+        footer: {
+          text: "deanprice.com zero-cost observability"
+        }
+      }
+    ]
+  };
+
+  try {
+    await fetch(webhookUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+  } catch (err) {
+    // Prevent unhandled webhook failures from crashing the worker
+    console.warn("[report.js] Webhook dispatch error:", err);
+  }
+}
+
+export async function onRequestPost(context) {
+  const request = context.request;
+
+  // 1. Content-Length check (guard against payload abuse)
+  const contentLength = request.headers.get("content-length");
+  if (contentLength && parseInt(contentLength, 10) > MAX_PAYLOAD_BYTES) {
+    return new Response("Payload Too Large", {
+      status: 413,
+      headers: {
+        "X-Robots-Tag": "noindex, nofollow, noarchive",
+        "Cache-Control": "no-store, no-cache, must-revalidate"
+      }
+    });
+  }
+
+  // 2. Drop automated scraper spam if detected by Cloudflare bot management
+  const botScore = request.cf?.botManagement?.score;
+  if (typeof botScore === "number" && botScore < 30) {
+    return new Response(null, { status: 204 });
+  }
+
+  // 3. Response headers with dynamic X-Robots-Tag (satisfies crawler isolation without touching _headers)
+  const responseHeaders = {
+    "X-Robots-Tag": "noindex, nofollow, noarchive",
+    "Cache-Control": "no-store, no-cache, must-revalidate",
+    "Access-Control-Allow-Origin": request.headers.get("origin") || "*",
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type"
+  };
+
+  let rawBody = "";
+  try {
+    rawBody = await request.text();
+  } catch (_) {
+    return new Response(null, { status: 204, headers: responseHeaders });
+  }
+
+  if (!rawBody || !rawBody.trim()) {
+    return new Response(null, { status: 204, headers: responseHeaders });
+  }
+
+  let parsed = null;
+  try {
+    parsed = JSON.parse(rawBody);
+  } catch (_) {
+    // Non-JSON or malformed payload; ignore safely
+    return new Response(null, { status: 204, headers: responseHeaders });
+  }
+
+  const reports = normalizeReports(parsed);
+  const webhookUrl = context.env.DISCORD_WEBHOOK_URL || context.env.ALERT_WEBHOOK_URL;
+
+  for (const report of reports) {
+    // Stream structured JSON to Cloudflare Real-Time Tail Logs
+    console.error(`[telemetry] ${JSON.stringify(report)}`);
+
+    // Asynchronously dispatch Discord alert if configured
+    if (webhookUrl && context.waitUntil) {
+      context.waitUntil(sendDiscordNotification(webhookUrl, report));
+    }
+  }
+
+  return new Response(null, {
+    status: 204,
+    headers: responseHeaders
+  });
+}
+
+export async function onRequestOptions(context) {
+  return new Response(null, {
+    status: 204,
+    headers: {
+      "Access-Control-Allow-Origin": context.request.headers.get("origin") || "*",
+      "Access-Control-Allow-Methods": "POST, OPTIONS",
+      "Access-Control-Allow-Headers": "Content-Type",
+      "Access-Control-Max-Age": "86400",
+      "X-Robots-Tag": "noindex, nofollow, noarchive",
+      "Cache-Control": "no-store, no-cache, must-revalidate"
+    }
+  });
+}

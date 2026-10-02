@@ -1,6 +1,7 @@
 package main
 
 import (
+	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
@@ -236,5 +237,33 @@ func TestNewDevHandler_RobotsTxt(t *testing.T) {
 	}
 	if !strings.Contains(wDefault.Body.String(), "DeanPrice.com Robots Exclusion File") {
 		t.Errorf("expected static robots.txt content for default host")
+	}
+}
+
+func TestNewDevHandler_ApiReport(t *testing.T) {
+	handler := newDevHandler()
+
+	// 1. POST /api/report returns 204 No Content and sets isolation headers
+	req := httptest.NewRequest(http.MethodPost, "http://localhost:8080/api/report", strings.NewReader(`{"type":"test"}`))
+	w := httptest.NewRecorder()
+	handler.ServeHTTP(w, req)
+
+	if w.Code != http.StatusNoContent {
+		t.Errorf("expected status 204 for POST /api/report, got %d", w.Code)
+	}
+	if got := w.Header().Get("X-Robots-Tag"); got != "noindex, nofollow, noarchive" {
+		t.Errorf("expected X-Robots-Tag noindex, got %q", got)
+	}
+	if got := w.Header().Get("Cache-Control"); got != "no-store, no-cache, must-revalidate" {
+		t.Errorf("expected Cache-Control no-store, got %q", got)
+	}
+
+	// 2. OPTIONS /api/report returns 204 No Content for CORS preflight
+	reqOptions := httptest.NewRequest(http.MethodOptions, "http://localhost:8080/api/report", nil)
+	wOptions := httptest.NewRecorder()
+	handler.ServeHTTP(wOptions, reqOptions)
+
+	if wOptions.Code != http.StatusNoContent {
+		t.Errorf("expected status 204 for OPTIONS /api/report, got %d", wOptions.Code)
 	}
 }

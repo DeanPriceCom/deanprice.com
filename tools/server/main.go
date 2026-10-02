@@ -170,6 +170,16 @@ func newDevHandler(customBaseDir ...string) http.Handler {
 			return
 		}
 
+		if cleanPath == "/api/report" {
+			w.Header().Set("Access-Control-Allow-Origin", "*")
+			w.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS")
+			w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+			w.Header().Set("X-Robots-Tag", "noindex, nofollow, noarchive")
+			w.Header().Set("Cache-Control", "no-store, no-cache, must-revalidate")
+			w.WriteHeader(http.StatusNoContent)
+			return
+		}
+
 		if cleanPath == "/" || cleanPath == "/index.html" {
 			htmlBytes, err := readServerFile(baseDir, "index.html")
 			if err != nil {
