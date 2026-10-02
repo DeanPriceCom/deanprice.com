@@ -22,3 +22,8 @@ jobs:
           configPath: ./.lighthouserc.json
           uploadArtifacts: true
           temporaryPublicStorage: false
+
+      - name: Generate Visual Scorecard Summary
+        if: always()
+        run: node .github/scripts/lighthouse-summary.js
+
