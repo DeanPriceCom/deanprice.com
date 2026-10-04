@@ -63,6 +63,7 @@ Allow: /favicon.ico
 Allow: /favicon.svg
 Allow: /*.png
 Allow: /safari-pinned-tab.svg
+Allow: /easter-egg
 
 # Let VIPs see the engine so they can read the "noindex" HTTP header
 Allow: /main.wasm
