@@ -17,6 +17,27 @@ const COLOR_MAP = {
   gray: 7041664     // 0x6B7280 - Generic / Informational
 };
 
+const DEDUPE_TTL_MS = 60 * 1000;
+const MAX_CACHE_ENTRIES = 100;
+const recentReports = new Map();
+
+function isDuplicateReport(report) {
+  const dedupeKey = `${report.type}:${report.url}:${(report.message || "").slice(0, 100)}`;
+  const now = Date.now();
+  const lastSeen = recentReports.get(dedupeKey);
+
+  if (lastSeen && (now - lastSeen) < DEDUPE_TTL_MS) {
+    return true; // Duplicate within 60s cooldown; do not update lastSeen so it re-alerts if error persists
+  }
+
+  recentReports.set(dedupeKey, now);
+  if (recentReports.size > MAX_CACHE_ENTRIES) {
+    const oldestKey = recentReports.keys().next().value;
+    if (oldestKey) recentReports.delete(oldestKey);
+  }
+  return false;
+}
+
 function truncate(str, maxLen) {
   if (!str) return "";
   const s = String(str);
@@ -36,7 +57,14 @@ function isExtensionOrNoise(filename, message, blockedURI, stack) {
 
   for (const s of targets) {
     if (!s) continue;
-    if (s.includes("extension:") || s.includes("cloudflareinsights.com")) {
+    if (
+      s.includes("extension:") ||
+      s.includes("cloudflareinsights.com") ||
+      s.includes(":2096") ||
+      /denied permission|SecurityError|operation is insecure|access to storage is not allowed/i.test(s) ||
+      /failed to fetch|networkerror|load failed|aborterror/i.test(s) ||
+      (s.includes("wasm_exec.js") && /unexpected token/i.test(s))
+    ) {
       return true;
     }
   }
@@ -104,7 +132,7 @@ function normalizeReports(rawJson) {
     const resolvedType = type || "unknown_error";
     const resolvedMessage = message || "Unknown error";
 
-    if (isExtensionOrNoise(filename, resolvedMessage, "", stack)) return reports;
+    if (isExtensionOrNoise(filename, resolvedMessage, url, stack)) return reports;
     if (resolvedType === "unknown_error" && resolvedMessage === "Unknown error" && !stack) return reports;
 
     let severity = "red";
@@ -185,25 +213,7 @@ async function sendDiscordNotification(webhookUrl, report) {
 export async function onRequestPost(context) {
   const request = context.request;
 
-  // 1. Content-Length check (guard against payload abuse)
-  const contentLength = request.headers.get("content-length");
-  if (contentLength && parseInt(contentLength, 10) > MAX_PAYLOAD_BYTES) {
-    return new Response("Payload Too Large", {
-      status: 413,
-      headers: {
-        "X-Robots-Tag": "noindex, nofollow, noarchive",
-        "Cache-Control": "no-store, no-cache, must-revalidate"
-      }
-    });
-  }
-
-  // 2. Drop automated scraper spam if detected by Cloudflare bot management
-  const botScore = request.cf?.botManagement?.score;
-  if (typeof botScore === "number" && botScore < 30) {
-    return new Response(null, { status: 204 });
-  }
-
-  // 3. Response headers with dynamic X-Robots-Tag (satisfies crawler isolation without touching _headers)
+  // 1. Response headers with dynamic X-Robots-Tag (satisfies crawler isolation without touching _headers)
   const responseHeaders = {
     "X-Robots-Tag": "noindex, nofollow, noarchive",
     "Cache-Control": "no-store, no-cache, must-revalidate",
@@ -211,6 +221,28 @@ export async function onRequestPost(context) {
     "Access-Control-Allow-Methods": "POST, OPTIONS",
     "Access-Control-Allow-Headers": "Content-Type"
   };
+
+  // 2. Non-Standard Port Firewall with Localhost Exemption
+  const reqUrl = new URL(request.url);
+  const isLocal = reqUrl.hostname === "localhost" || reqUrl.hostname === "127.0.0.1" || reqUrl.hostname === "::1";
+  if (!isLocal && reqUrl.port && reqUrl.port !== "80" && reqUrl.port !== "443") {
+    return new Response(null, { status: 204, headers: responseHeaders });
+  }
+
+  // 3. Content-Length check (guard against payload abuse)
+  const contentLength = request.headers.get("content-length");
+  if (contentLength && parseInt(contentLength, 10) > MAX_PAYLOAD_BYTES) {
+    return new Response("Payload Too Large", {
+      status: 413,
+      headers: responseHeaders
+    });
+  }
+
+  // 4. Drop automated scraper spam if detected by Cloudflare bot management
+  const botScore = request.cf?.botManagement?.score;
+  if (typeof botScore === "number" && botScore < 30) {
+    return new Response(null, { status: 204, headers: responseHeaders });
+  }
 
   let rawBody = "";
   try {
@@ -238,8 +270,8 @@ export async function onRequestPost(context) {
     // Stream structured JSON to Cloudflare Real-Time Tail Logs
     console.error(`[telemetry] ${JSON.stringify(report)}`);
 
-    // Asynchronously dispatch Discord alert if configured
-    if (webhookUrl && context.waitUntil) {
+    // Asynchronously dispatch Discord alert if configured and not duplicate
+    if (webhookUrl && context.waitUntil && !isDuplicateReport(report)) {
       context.waitUntil(sendDiscordNotification(webhookUrl, report));
     }
   }

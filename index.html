@@ -630,8 +630,19 @@
     </div>
     <script src="/wasm_exec.js" defer></script>
     <script id="wasm-engine">
+        var sentReports = {};
+        var reportCount = 0;
+        var MAX_REPORTS_PER_PAGE = 3;
+
         function sendReport(data) {
-            if (!navigator.onLine || !navigator.sendBeacon) return;
+            if (!data || !navigator.onLine || !navigator.sendBeacon) return;
+            if (reportCount >= MAX_REPORTS_PER_PAGE) return;
+
+            var sig = (data.type || '') + '|' + (data.message || data.reason || '');
+            if (sentReports[sig]) return;
+            sentReports[sig] = true;
+            reportCount++;
+
             try {
                 navigator.sendBeacon('/api/report', JSON.stringify(data));
             } catch (e) { }
@@ -639,6 +650,9 @@
 
         window.addEventListener('error', function (event) {
             if (!event.filename || event.filename.indexOf('extension:') !== -1 || event.message === 'Script error.') return;
+            if (typeof window.BigInt === "undefined" || typeof window.BigInt64Array === "undefined") {
+                if (event.filename.indexOf('wasm_exec.js') !== -1) return;
+            }
             sendReport({
                 type: 'uncaught_error',
                 message: event.message,
@@ -726,7 +740,7 @@
         } else if (Boolean(navigator.webdriver) || /googlebot|google-inspectiontool|googleother|chrome-lighthouse|google-read-aloud|bingbot|yandexbot|baiduspider|duck(duck|assist)bot|seznambot|sogou.*spider|yeti|bytespider|amazonbot|youbot|ccbot|ai2bot|gptbot|chatgpt-user|oai-searchbot|grokbot|xai-grok|cohere-ai|anthropic-ai|claudebot|claude-user|claude-searchbot|claude-web|perplexitybot|meta-externalagent|applebot|ahrefsbot|semrushbot|dotbot|headlesschrome|screaming frog|ptst|gtmetrix/i.test(navigator.userAgent)) {
             // 2. Crawler check protects SEO indexing
             console.log("Bot detected. Retaining static fallback.");
-        } else if (typeof window.WebAssembly === "undefined") {
+        } else if (!window.WebAssembly || typeof window.WebAssembly.instantiate !== "function" || typeof window.BigInt === "undefined" || typeof window.BigInt64Array === "undefined") {
             // 3. Immediate zero-overhead check for legacy browsers
             triggerShield('legacy');
         } else {
@@ -742,7 +756,8 @@
                     var wasmPath = "/main.wasm";
                     var contactChannels = ['email', 'phone', 'whatsapp'];
 
-                    var loadPromise = (typeof window.WebAssembly.instantiateStreaming === "function")
+                    var hasStreaming = Boolean(window.WebAssembly && typeof window.WebAssembly.instantiateStreaming === "function");
+                    var loadPromise = hasStreaming
                         ? WebAssembly.instantiateStreaming(fetch(wasmPath, { mode: 'cors' }), go.importObject)
                         : fetch(wasmPath, { mode: 'cors' }).then(function (res) { return res.arrayBuffer(); }).then(function (bytes) { return WebAssembly.instantiate(bytes, go.importObject); });
 
@@ -767,18 +782,26 @@
                             iconrow.classList.add('ready');
                         }
                     }).catch(function (err) {
-                        sendReport({
-                            type: 'wasm_hydration_error',
-                            message: err && err.message || String(err),
-                            url: window.location.pathname,
-                            ts: Date.now()
-                        });
+                        var errMsg = err && (err.message || String(err)) || '';
+                        var isNetworkDrop = !navigator.onLine ||
+                            (err && err.name === 'AbortError') ||
+                            /failed to fetch|networkerror|load failed|aborted/i.test(errMsg);
+
+                        if (!isNetworkDrop) {
+                            sendReport({
+                                type: 'wasm_hydration_error',
+                                message: errMsg,
+                                url: window.location.pathname,
+                                ts: Date.now()
+                            });
+                        }
                         triggerShield('blocked');
                     });
                 } catch (criticalError) {
+                    var critMsg = criticalError && criticalError.message || String(criticalError);
                     sendReport({
                         type: 'wasm_hydration_error',
-                        message: criticalError && criticalError.message || String(criticalError),
+                        message: critMsg,
                         url: window.location.pathname,
                         ts: Date.now()
                     });
@@ -806,13 +829,21 @@
 
                 navigator.serviceWorker.register(swUrl)
                     .then(function (registration) {
-                        console.log('[PWA] Service Worker registered securely. Scope:', registration.scope);
+                        if (registration && registration.scope) {
+                            console.log('[PWA] Service Worker registered securely. Scope:', registration.scope);
+                        }
                     })
                     .catch(function (error) {
+                        var msg = error && (error.message || String(error)) || '';
+                        var name = error && error.name || '';
+                        if (name === 'SecurityError' || name === 'AbortError' || /denied|insecure|not allowed|security/i.test(msg) || /:\d{4,5}/.test(window.location.host)) {
+                            console.warn('[PWA] Service Worker registration skipped/unavailable:', error);
+                            return;
+                        }
                         console.warn('[PWA] Service Worker registration failed:', error);
                         sendReport({
                             type: 'sw_registration_failure',
-                            message: error && error.message || String(error),
+                            message: msg,
                             url: window.location.pathname,
                             ts: Date.now()
                         });
