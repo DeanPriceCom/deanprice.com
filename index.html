@@ -453,6 +453,8 @@
         }
 
         .blinking-cursor {
+            font-size: 0;
+            letter-spacing: 0;
             text-decoration: none;
             color: inherit;
             display: inline-block;
@@ -466,6 +468,12 @@
             cursor: pointer;
             animation: blink 1s step-end infinite;
             transition: color 0.2s ease;
+        }
+
+        .blinking-cursor::before {
+            content: '|';
+            font-size: 14px;
+            letter-spacing: 0.5px;
         }
 
         @keyframes blink {
@@ -592,7 +600,7 @@
                         aria-label="Source on GitHub (opens in a new tab)">Source on GitHub</a><span
                         aria-hidden="true">&nbsp;</span><a href="https://www.deanprice.com/easter-egg"
                         class="blinking-cursor" target="_blank" rel="noopener"
-                        aria-label="Easter egg (opens in a new tab)">|</a>
+                        aria-label="Easter egg (opens in a new tab)">Easter Egg</a>
                 </span>
             </span>
         </footer>
