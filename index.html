@@ -844,6 +844,118 @@
                     });
             });
         }
+
+        // Diagnostic Overlay (?debug=1 or 5 rapid taps on footer)
+        (function initDebugTelemetry() {
+            var params = new URLSearchParams(window.location.search);
+            var isDebug = params.has('debug') || params.has('diag');
+
+            function setupFooterTaps() {
+                var tapCount = 0;
+                var tapTimer = null;
+                var footer = document.querySelector('footer');
+                if (footer) {
+                    footer.addEventListener('click', function () {
+                        tapCount++;
+                        clearTimeout(tapTimer);
+                        tapTimer = setTimeout(function () { tapCount = 0; }, 2000);
+                        if (tapCount >= 5) {
+                            tapCount = 0;
+                            renderBadge();
+                        }
+                    });
+                }
+            }
+
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', setupFooterTaps);
+            } else {
+                setupFooterTaps();
+            }
+
+            if (isDebug) {
+                if (document.readyState === 'loading') {
+                    document.addEventListener('DOMContentLoaded', renderBadge);
+                } else {
+                    renderBadge();
+                }
+            }
+
+            var badgeEl = null;
+            function renderBadge() {
+                if (badgeEl) return;
+                badgeEl = document.createElement('div');
+                badgeEl.id = 'debug-overlay';
+                badgeEl.style.cssText = 'position:fixed;top:8px;left:8px;right:8px;max-height:85vh;overflow-y:auto;background:rgba(10,20,30,0.92);color:#39ff14;font-family:monospace;font-size:11px;line-height:1.45;padding:12px;border-radius:8px;border:1px solid #39ff14;z-index:999999;box-shadow:0 8px 24px rgba(0,0,0,0.7);text-align:left;word-break:break-all;-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px);';
+
+                var headerDiv = document.createElement('div');
+                headerDiv.style.cssText = 'display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;border-bottom:1px solid rgba(57,255,20,0.4);padding-bottom:4px;';
+
+                var title = document.createElement('strong');
+                title.textContent = 'TELEMETRY (v2-gecko-fix)';
+                title.style.color = '#ffffff';
+                headerDiv.appendChild(title);
+
+                var closeBtn = document.createElement('button');
+                closeBtn.type = 'button';
+                closeBtn.textContent = '✕ Close';
+                closeBtn.style.cssText = 'background:#222222;color:#39ff14;border:1px solid #39ff14;border-radius:4px;padding:2px 8px;font-size:10px;cursor:pointer;font-family:monospace;';
+                closeBtn.addEventListener('click', function () {
+                    if (badgeEl && badgeEl.parentNode) badgeEl.parentNode.removeChild(badgeEl);
+                    badgeEl = null;
+                });
+                headerDiv.appendChild(closeBtn);
+                badgeEl.appendChild(headerDiv);
+
+                var pre = document.createElement('pre');
+                pre.style.cssText = 'margin:0;white-space:pre-wrap;font-family:inherit;font-size:inherit;color:inherit;';
+                badgeEl.appendChild(pre);
+
+                document.body.appendChild(badgeEl);
+
+                function update() {
+                    if (!badgeEl) return;
+                    var pc = document.getElementById('pagecontainer');
+                    var main = document.querySelector('main');
+                    var foot = document.querySelector('footer');
+                    var pcRect = pc ? pc.getBoundingClientRect() : null;
+                    var mainRect = main ? main.getBoundingClientRect() : null;
+                    var footRect = foot ? foot.getBoundingClientRect() : null;
+                    var mainStyle = main ? window.getComputedStyle(main) : null;
+                    var footStyle = foot ? window.getComputedStyle(foot) : null;
+                    var pcStyle = pc ? window.getComputedStyle(pc) : null;
+                    var bodyStyle = window.getComputedStyle(document.body);
+                    var htmlStyle = window.getComputedStyle(document.documentElement);
+
+                    var swStatus = 'Unsupported';
+                    if ('serviceWorker' in navigator) {
+                        swStatus = navigator.serviceWorker.controller
+                            ? 'Controlling (Active)'
+                            : 'No Controller (Network/Bypass)';
+                    }
+
+                    var lines = [
+                        'Viewport: ' + window.innerWidth + 'x' + window.innerHeight + ' (dpr: ' + (window.devicePixelRatio || 1) + ')',
+                        'HTML: clientH=' + document.documentElement.clientHeight + ' offsetH=' + document.documentElement.offsetHeight + ' cssH=' + htmlStyle.height,
+                        'Body: clientH=' + document.body.clientHeight + ' offsetH=' + document.body.offsetHeight + ' cssH=' + bodyStyle.height,
+                        'PC: h=' + (pcRect ? pcRect.height.toFixed(1) : 'null') + ' cssH=' + (pcStyle ? pcStyle.height : '') + ' minH=' + (pcStyle ? pcStyle.minHeight : ''),
+                        'Main: top=' + (mainRect ? mainRect.top.toFixed(1) : 'null') + ' h=' + (mainRect.height ? mainRect.height.toFixed(1) : 'null') + ' btm=' + (mainRect.bottom ? mainRect.bottom.toFixed(1) : 'null'),
+                        'Main Margins: T=' + (mainStyle ? mainStyle.marginTop : '') + ' B=' + (mainStyle ? mainStyle.marginBottom : ''),
+                        'Footer: top=' + (footRect ? footRect.top.toFixed(1) : 'null') + ' h=' + (footRect.height ? footRect.height.toFixed(1) : 'null') + ' btm=' + (footRect.bottom ? footRect.bottom.toFixed(1) : 'null'),
+                        '---',
+                        'GAP BELOW FOOTER: ' + (footRect ? (window.innerHeight - footRect.bottom).toFixed(1) + 'px' : 'N/A'),
+                        'SW State: ' + swStatus,
+                        'Timestamp: ' + new Date().toISOString().slice(11, 19)
+                    ];
+                    pre.textContent = lines.join('\n');
+                }
+
+                update();
+                window.addEventListener('resize', update);
+                window.addEventListener('scroll', update);
+                setInterval(update, 1000);
+            }
+        })();
     </script>
 </body>
 
