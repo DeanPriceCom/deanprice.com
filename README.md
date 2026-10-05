@@ -46,7 +46,7 @@ A deliberately over-engineered personal identity card and systems sandbox. Engin
 * Includes a pre-rendered, accessible fallback shield toggled via the HTML5 `hidden` attribute if WebAssembly execution is blocked by client-side filters.
 
 ### 5. Progressive Web App (PWA) & Security Headers
-* Strict **Content Security Policy (CSP Level 3)** with build-time SHA-256 script hashing and **Trusted Types** policy enforcement (`trusted-types swPolicy`).
+* Strict **Content Security Policy (CSP Level 3)** with build-time SHA-256 script hashing and **Trusted Types** policy enforcement (`trusted-types swPolicy 'allow-duplicates'`).
 * Resilient Service Worker using **Network-First navigation with offline cache fallback**, eliminating stale geo-routing and version skew while guaranteeing offline availability.
 * Service Worker cache invalidation keyed directly to Cloudflare deployment commit SHAs (`CF_PAGES_COMMIT_SHA`).
 

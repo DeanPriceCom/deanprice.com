@@ -274,20 +274,39 @@ func TestServiceWorkerRegistrationGatingAndTelemetry(t *testing.T) {
 		t.Errorf("index.html must gate Service Worker registration behind !isBot to prevent crawler rejection noise")
 	}
 
-	// 2. Ensure service worker catch block suppresses benign 'rejected', NotSupportedError, and offline conditions
-	if !strings.Contains(htmlStr, "rejected") || !strings.Contains(htmlStr, "!navigator.onLine") || !strings.Contains(htmlStr, "NotSupportedError") {
-		t.Errorf("index.html must suppress benign 'rejected', 'NotSupportedError', and offline failures in service worker registration catch")
+	// 2. Ensure service worker policy is cached on window._swPolicy and guards against unblessed string fallback
+	if !strings.Contains(htmlStr, "window._swPolicy") {
+		t.Errorf("index.html must cache Trusted Types policy in window._swPolicy to prevent duplicate policy creation")
+	}
+	if !strings.Contains(htmlStr, "if (window.trustedTypes && !swPolicy)") {
+		t.Errorf("index.html must guard against unblessed string fallback when Trusted Types is active")
 	}
 
-	// 3. Ensure functions/api/report.js filters out sw_registration_failure with 'rejected'
+	// 3. Ensure service worker catch block suppresses benign 'rejected', NotSupportedError, trustedscripturl, and offline conditions
+	if !strings.Contains(htmlStr, "rejected") || !strings.Contains(htmlStr, "!navigator.onLine") || !strings.Contains(htmlStr, "NotSupportedError") || !strings.Contains(htmlStr, "trustedscripturl") {
+		t.Errorf("index.html must suppress benign 'rejected', 'NotSupportedError', 'trustedscripturl', and offline failures in service worker registration catch")
+	}
+
+	// 4. Ensure functions/api/report.js filters out sw_registration_failure with 'rejected', 'trustedscripturl', and 'trusted types'
 	reportBytes, err := os.ReadFile("functions/api/report.js")
 	if err != nil {
 		t.Fatalf("Failed to read functions/api/report.js: %v", err)
 	}
 	reportStr := string(reportBytes)
 
-	if !strings.Contains(reportStr, "sw_registration_failure") || !strings.Contains(reportStr, "rejected") {
-		t.Errorf("functions/api/report.js must drop sw_registration_failure reports containing 'rejected'")
+	if !strings.Contains(reportStr, "sw_registration_failure") || !strings.Contains(reportStr, "rejected") || !strings.Contains(reportStr, "trustedscripturl") {
+		t.Errorf("functions/api/report.js must drop sw_registration_failure reports containing 'rejected' and 'trustedscripturl'")
+	}
+
+	// 5. Ensure _headers enforces allow-duplicates for swPolicy
+	headersBytes, err := os.ReadFile("_headers")
+	if err != nil {
+		t.Fatalf("Failed to read _headers: %v", err)
+	}
+	headersStr := string(headersBytes)
+
+	if !strings.Contains(headersStr, "trusted-types swPolicy 'allow-duplicates'") {
+		t.Errorf("_headers must configure 'trusted-types swPolicy 'allow-duplicates'' to permit idempotent policy creation")
 	}
 }
 

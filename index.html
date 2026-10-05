@@ -830,14 +830,21 @@
             window.addEventListener('load', function () {
                 if (!navigator.onLine) return;
 
-                var swPolicy = null;
-                if (window.trustedTypes && typeof window.trustedTypes.createPolicy === 'function') {
+                var swPolicy = window._swPolicy || null;
+                if (!swPolicy && window.trustedTypes && typeof window.trustedTypes.createPolicy === 'function') {
                     try {
                         swPolicy = window.trustedTypes.createPolicy('swPolicy', {
                             createScriptURL: function (url) { return url === '/sw.js' ? url : ''; }
                         });
+                        window._swPolicy = swPolicy;
                     } catch (_) { }
                 }
+
+                if (window.trustedTypes && !swPolicy) {
+                    console.warn('[PWA] Service Worker registration skipped: Trusted Types policy unavailable.');
+                    return;
+                }
+
                 var swUrl = swPolicy ? swPolicy.createScriptURL('/sw.js') : '/sw.js';
 
                 navigator.serviceWorker.register(swUrl)
@@ -853,7 +860,7 @@
                             name === 'SecurityError' ||
                             name === 'AbortError' ||
                             name === 'NotSupportedError' ||
-                            /denied|insecure|not allowed|security|rejected|not supported/i.test(msg) ||
+                            /denied|insecure|not allowed|security|rejected|not supported|trustedscripturl|trusted types/i.test(msg) ||
                             /:\d{4,5}/.test(window.location.host)) {
                             console.warn('[PWA] Service Worker registration skipped/unavailable:', error);
                             return;

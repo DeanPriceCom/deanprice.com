@@ -202,7 +202,7 @@ function normalizeReports(rawJson) {
 
     if (isExtensionOrNoise(filename, resolvedMessage, url, stack)) return reports;
     if (resolvedType === "unknown_error" && resolvedMessage === "Unknown error" && !stack) return reports;
-    if (resolvedType === "sw_registration_failure" && /rejected|not supported|security/i.test(resolvedMessage)) return reports;
+    if (resolvedType === "sw_registration_failure" && /rejected|not supported|security|trustedscripturl|trusted types/i.test(resolvedMessage)) return reports;
     if (resolvedType === "unhandled_rejection" && /^rejected$/i.test(resolvedMessage.trim())) return reports;
 
     let severity = "red";
