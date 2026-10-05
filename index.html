@@ -344,7 +344,7 @@
 
         @media (max-width: 570px) {
             footer {
-                padding: 16px 20px max(12px, env(safe-area-inset-bottom, 0px));
+                padding: 16px 20px 12px;
             }
 
             footer .desktop-pipe {
@@ -354,6 +354,15 @@
             footer .footer-item {
                 display: block;
                 margin: 0;
+            }
+        }
+
+        /* Progressive enhancement: Protect iOS floating home indicator */
+        @supports (-webkit-touch-callout: none) {
+            @media (max-width: 570px) {
+                footer {
+                    padding-bottom: max(12px, env(safe-area-inset-bottom, 0px));
+                }
             }
         }
 
