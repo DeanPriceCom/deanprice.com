@@ -38,16 +38,50 @@ function isDuplicateReport(report) {
   return false;
 }
 
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const KNOWN_EXTENSION_POLICIES = /^(?:AGPolicy|goog#html|lit-html|emscripten#workerPolicy|adblock|nordpass|bitwarden|lastpass|react-devtools)/i;
+
+function isFirstPartySource(filename) {
+  if (!filename) return false;
+  if (filename.startsWith("/")) return true;
+  if (!/^https?:\/\//i.test(filename)) return false;
+
+  try {
+    const host = new URL(filename).hostname.toLowerCase();
+    return (
+      host === "deanprice.com" ||
+      host.endsWith(".deanprice.com") ||
+      host === "deanprice.uk" ||
+      host.endsWith(".deanprice.uk") ||
+      host === "deanprice.tr" ||
+      host.endsWith(".deanprice.tr") ||
+      host === "deanprice.ie" ||
+      host.endsWith(".deanprice.ie") ||
+      host.endsWith(".pages.dev") ||
+      host === "localhost" ||
+      host === "127.0.0.1" ||
+      host === "::1" ||
+      host === "[::1]"
+    );
+  } catch {
+    return false;
+  }
+}
+
 function truncate(str, maxLen) {
   if (!str) return "";
   const s = String(str);
   return s.length > maxLen ? s.slice(0, maxLen - 3) + "..." : s;
 }
 
-function isExtensionOrNoise(filename, message, blockedURI, stack) {
+function isExtensionOrNoise(filename, message, blockedURI, stack, sample, directive) {
   const msgStr = String(message || "");
   if (msgStr === "Script error.") return true;
 
+  const sampleStr = String(sample || "");
+  const dirStr = String(directive || "");
+
+  // Note: sampleStr intentionally omitted from targets to prevent content false-positives
   const targets = [
     String(filename || ""),
     msgStr,
@@ -69,6 +103,30 @@ function isExtensionOrNoise(filename, message, blockedURI, stack) {
     }
   }
 
+  const isTrustedTypes =
+    dirStr.startsWith("trusted-types") ||
+    dirStr.startsWith("require-trusted-types-for") ||
+    blockedURI === "trusted-types-policy" ||
+    blockedURI === "trusted-types-sink";
+
+  if (isTrustedTypes) {
+    // 1. Drop known third-party extension policy names (only evaluated for policy creations)
+    const isPolicyCreation =
+      blockedURI === "trusted-types-policy" ||
+      (dirStr.startsWith("trusted-types") && blockedURI !== "trusted-types-sink");
+
+    if (isPolicyCreation && sampleStr) {
+      if (KNOWN_EXTENSION_POLICIES.test(sampleStr) || UUID_REGEX.test(sampleStr)) {
+        return true;
+      }
+    }
+
+    // 2. Drop any Trusted Types violation originating from missing, anonymous, or third-party sources
+    if (!isFirstPartySource(filename)) {
+      return true;
+    }
+  }
+
   return false;
 }
 
@@ -80,15 +138,21 @@ function normalizeReports(rawJson) {
     for (const item of rawJson) {
       if (item && item.type === "csp-violation" && item.body) {
         const body = item.body;
-        if (isExtensionOrNoise(body.sourceFile || "", "", body.blockedURL || "", "")) continue;
+        const sourceFile = body.sourceFile || "";
+        const blockedURL = body.blockedURL || "";
+        const directive = body.effectiveDirective || body.violatedDirective || "";
+        const sample = body.sample || "";
+
+        if (isExtensionOrNoise(sourceFile, "", blockedURL, "", sample, directive)) continue;
         reports.push({
           category: "csp",
           type: "csp_violation",
           url: body.documentURL || "",
-          directive: body.effectiveDirective || body.violatedDirective || "",
-          blocked: body.blockedURL || "",
-          message: `CSP Violation: ${body.effectiveDirective || "directive"} blocked ${body.blockedURL || "resource"}`,
-          details: `Directive: ${body.effectiveDirective || ""}\nBlocked URL: ${body.blockedURL || ""}\nSource: ${body.sourceFile || ""}:${body.lineNumber || ""}:${body.columnNumber || ""}`,
+          directive: directive,
+          blocked: blockedURL,
+          sample: sample,
+          message: `CSP Violation: ${directive || "directive"} blocked ${blockedURL || "resource"}`,
+          details: `Directive: ${directive || ""}\nBlocked URL: ${blockedURL || ""}\nSource: ${sourceFile || ""}:${body.lineNumber || ""}:${body.columnNumber || ""}${sample ? `\nSample: ${sample}` : ""}`,
           severity: "amber"
         });
       }
@@ -101,15 +165,19 @@ function normalizeReports(rawJson) {
     const csp = rawJson["csp-report"];
     const blockedURI = csp["blocked-uri"] || "";
     const sourceFile = csp["source-file"] || csp["source_file"] || "";
-    if (!isExtensionOrNoise(sourceFile, "", blockedURI, "")) {
+    const directive = csp["violated-directive"] || csp["effective-directive"] || "";
+    const sample = csp["script-sample"] || csp["sample"] || "";
+
+    if (!isExtensionOrNoise(sourceFile, "", blockedURI, "", sample, directive)) {
       reports.push({
         category: "csp",
         type: "legacy_csp_report",
         url: csp["document-uri"] || "",
-        directive: csp["violated-directive"] || csp["effective-directive"] || "",
+        directive: directive,
         blocked: blockedURI,
-        message: `CSP Violation: ${csp["violated-directive"] || "directive"} blocked ${blockedURI}`,
-        details: `Directive: ${csp["violated-directive"] || ""}\nBlocked URI: ${blockedURI}\nDocument: ${csp["document-uri"] || ""}`,
+        sample: sample,
+        message: `CSP Violation: ${directive || "directive"} blocked ${blockedURI}`,
+        details: `Directive: ${directive || ""}\nBlocked URI: ${blockedURI}\nDocument: ${csp["document-uri"] || ""}${sample ? `\nSample: ${sample}` : ""}`,
         severity: "amber"
       });
     }
@@ -172,6 +240,9 @@ async function sendDiscordNotification(webhookUrl, report) {
   }
   if (report.blocked) {
     fields.push({ name: "Blocked Resource", value: `\`${truncate(report.blocked, 200)}\``, inline: false });
+  }
+  if (report.sample) {
+    fields.push({ name: "Sample", value: `\`${truncate(report.sample, 200)}\``, inline: false });
   }
 
   const detailContent = truncate(report.details || report.message, 1000);
