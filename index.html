@@ -344,7 +344,7 @@
 
         @media (max-width: 570px) {
             footer {
-                padding-bottom: max(12px, env(safe-area-inset-bottom, 0px));
+                padding: 16px 20px max(12px, env(safe-area-inset-bottom, 0px));
             }
 
             footer .desktop-pipe {
@@ -848,14 +848,15 @@
         // Diagnostic Overlay (?debug=1 or 5 rapid taps on footer)
         (function initDebugTelemetry() {
             var params = new URLSearchParams(window.location.search);
-            var isDebug = params.has('debug') || params.has('diag');
+            var isDebug = isDevOrPreview && (params.has('debug') || params.has('diag'));
 
             function setupFooterTaps() {
                 var tapCount = 0;
                 var tapTimer = null;
                 var footer = document.querySelector('footer');
                 if (footer) {
-                    footer.addEventListener('click', function () {
+                    footer.addEventListener('click', function (e) {
+                        if (e.target && e.target.closest('a')) return;
                         tapCount++;
                         clearTimeout(tapTimer);
                         tapTimer = setTimeout(function () { tapCount = 0; }, 2000);
@@ -882,6 +883,8 @@
             }
 
             var badgeEl = null;
+            var updateTimer = null;
+
             function renderBadge() {
                 if (badgeEl) return;
                 badgeEl = document.createElement('div');
@@ -892,7 +895,7 @@
                 headerDiv.style.cssText = 'display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;border-bottom:1px solid rgba(57,255,20,0.4);padding-bottom:4px;';
 
                 var title = document.createElement('strong');
-                title.textContent = 'TELEMETRY (v2-gecko-fix)';
+                title.textContent = 'SYSTEM TELEMETRY';
                 title.style.color = '#ffffff';
                 headerDiv.appendChild(title);
 
@@ -901,6 +904,12 @@
                 closeBtn.textContent = '✕ Close';
                 closeBtn.style.cssText = 'background:#222222;color:#39ff14;border:1px solid #39ff14;border-radius:4px;padding:2px 8px;font-size:10px;cursor:pointer;font-family:monospace;';
                 closeBtn.addEventListener('click', function () {
+                    if (updateTimer) {
+                        clearInterval(updateTimer);
+                        updateTimer = null;
+                    }
+                    window.removeEventListener('resize', update);
+                    window.removeEventListener('scroll', update);
                     if (badgeEl && badgeEl.parentNode) badgeEl.parentNode.removeChild(badgeEl);
                     badgeEl = null;
                 });
@@ -953,7 +962,7 @@
                 update();
                 window.addEventListener('resize', update);
                 window.addEventListener('scroll', update);
-                setInterval(update, 1000);
+                updateTimer = setInterval(update, 1000);
             }
         })();
     </script>
