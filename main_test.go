@@ -262,6 +262,35 @@ func TestServiceWorkerCacheIntegrity(t *testing.T) {
 	}
 }
 
+func TestServiceWorkerRegistrationGatingAndTelemetry(t *testing.T) {
+	htmlBytes, err := os.ReadFile("index.html")
+	if err != nil {
+		t.Fatalf("Failed to read index.html: %v", err)
+	}
+	htmlStr := string(htmlBytes)
+
+	// 1. Ensure service worker registration is gated against crawlers/bots
+	if !strings.Contains(htmlStr, "!isBot && 'serviceWorker' in navigator") {
+		t.Errorf("index.html must gate Service Worker registration behind !isBot to prevent crawler rejection noise")
+	}
+
+	// 2. Ensure service worker catch block suppresses benign 'rejected', NotSupportedError, and offline conditions
+	if !strings.Contains(htmlStr, "rejected") || !strings.Contains(htmlStr, "!navigator.onLine") || !strings.Contains(htmlStr, "NotSupportedError") {
+		t.Errorf("index.html must suppress benign 'rejected', 'NotSupportedError', and offline failures in service worker registration catch")
+	}
+
+	// 3. Ensure functions/api/report.js filters out sw_registration_failure with 'rejected'
+	reportBytes, err := os.ReadFile("functions/api/report.js")
+	if err != nil {
+		t.Fatalf("Failed to read functions/api/report.js: %v", err)
+	}
+	reportStr := string(reportBytes)
+
+	if !strings.Contains(reportStr, "sw_registration_failure") || !strings.Contains(reportStr, "rejected") {
+		t.Errorf("functions/api/report.js must drop sw_registration_failure reports containing 'rejected'")
+	}
+}
+
 func TestDevHostSyncIntegrity(t *testing.T) {
 	// Verify that preview domain rules are in sync across:
 	// 1. internal/contact/decrypt.go

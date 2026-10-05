@@ -738,11 +738,12 @@
         var activeShield = previewShield && validShields[previewShield.toLowerCase()];
         var debugParam = isDevOrPreview ? params.get('debug') : null;
         var isDebugHud = Boolean(debugParam && debugParam.toLowerCase() === 'hud');
+        var isBot = Boolean(navigator.webdriver) || /googlebot|google-inspectiontool|googleother|chrome-lighthouse|google-read-aloud|bingbot|yandexbot|baiduspider|duck(duck|assist)bot|seznambot|sogou.*spider|yeti|bytespider|amazonbot|youbot|ccbot|ai2bot|gptbot|chatgpt-user|oai-searchbot|grokbot|xai-grok|cohere-ai|anthropic-ai|claudebot|claude-user|claude-searchbot|claude-web|perplexitybot|meta-externalagent|applebot|ahrefsbot|semrushbot|dotbot|headlesschrome|screaming frog|ptst|gtmetrix/i.test(navigator.userAgent);
 
         // 1. Preview mode check runs FIRST (enables automated test inspection regardless of navigator.webdriver)
         if (activeShield) {
             triggerShield(activeShield);
-        } else if (Boolean(navigator.webdriver) || /googlebot|google-inspectiontool|googleother|chrome-lighthouse|google-read-aloud|bingbot|yandexbot|baiduspider|duck(duck|assist)bot|seznambot|sogou.*spider|yeti|bytespider|amazonbot|youbot|ccbot|ai2bot|gptbot|chatgpt-user|oai-searchbot|grokbot|xai-grok|cohere-ai|anthropic-ai|claudebot|claude-user|claude-searchbot|claude-web|perplexitybot|meta-externalagent|applebot|ahrefsbot|semrushbot|dotbot|headlesschrome|screaming frog|ptst|gtmetrix/i.test(navigator.userAgent)) {
+        } else if (isBot) {
             // 2. Crawler check protects SEO indexing
             console.log("Bot detected. Retaining static fallback.");
         } else if (!window.WebAssembly || typeof window.WebAssembly.instantiate !== "function" || typeof window.BigInt === "undefined" || typeof window.BigInt64Array === "undefined") {
@@ -825,11 +826,18 @@
             if (event.persisted) window.location.reload();
         });
 
-        if ('serviceWorker' in navigator) {
+        if (!isBot && 'serviceWorker' in navigator) {
             window.addEventListener('load', function () {
-                var swPolicy = window.trustedTypes && window.trustedTypes.createPolicy('swPolicy', {
-                    createScriptURL: function (url) { return url === '/sw.js' ? url : ''; }
-                });
+                if (!navigator.onLine) return;
+
+                var swPolicy = null;
+                if (window.trustedTypes && typeof window.trustedTypes.createPolicy === 'function') {
+                    try {
+                        swPolicy = window.trustedTypes.createPolicy('swPolicy', {
+                            createScriptURL: function (url) { return url === '/sw.js' ? url : ''; }
+                        });
+                    } catch (_) { }
+                }
                 var swUrl = swPolicy ? swPolicy.createScriptURL('/sw.js') : '/sw.js';
 
                 navigator.serviceWorker.register(swUrl)
@@ -841,7 +849,12 @@
                     .catch(function (error) {
                         var msg = error && (error.message || String(error)) || '';
                         var name = error && error.name || '';
-                        if (name === 'SecurityError' || name === 'AbortError' || /denied|insecure|not allowed|security/i.test(msg) || /:\d{4,5}/.test(window.location.host)) {
+                        if (!navigator.onLine ||
+                            name === 'SecurityError' ||
+                            name === 'AbortError' ||
+                            name === 'NotSupportedError' ||
+                            /denied|insecure|not allowed|security|rejected|not supported/i.test(msg) ||
+                            /:\d{4,5}/.test(window.location.host)) {
                             console.warn('[PWA] Service Worker registration skipped/unavailable:', error);
                             return;
                         }

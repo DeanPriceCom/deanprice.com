@@ -95,7 +95,7 @@ function isExtensionOrNoise(filename, message, blockedURI, stack, sample, direct
       s.includes("extension:") ||
       s.includes("cloudflareinsights.com") ||
       s.includes(":2096") ||
-      /denied permission|SecurityError|operation is insecure|access to storage is not allowed/i.test(s) ||
+      /denied permission|SecurityError|operation is insecure|access to storage is not allowed|the operation is not supported/i.test(s) ||
       /failed to fetch|networkerror|load failed|aborterror/i.test(s) ||
       (s.includes("wasm_exec.js") && /unexpected token/i.test(s))
     ) {
@@ -202,6 +202,8 @@ function normalizeReports(rawJson) {
 
     if (isExtensionOrNoise(filename, resolvedMessage, url, stack)) return reports;
     if (resolvedType === "unknown_error" && resolvedMessage === "Unknown error" && !stack) return reports;
+    if (resolvedType === "sw_registration_failure" && /rejected|not supported|security/i.test(resolvedMessage)) return reports;
+    if (resolvedType === "unhandled_rejection" && /^rejected$/i.test(resolvedMessage.trim())) return reports;
 
     let severity = "red";
     if (resolvedType === "unhandled_rejection") {
