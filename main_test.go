@@ -558,3 +558,58 @@ func TestAliasRobotsParity(t *testing.T) {
 			aliasMiddleware, aliasServer)
 	}
 }
+
+func TestDecoyInspectionIntegrity(t *testing.T) {
+	htmlBytes, err := os.ReadFile("index.html")
+	if err != nil {
+		t.Fatalf("Failed to read index.html: %v", err)
+	}
+	htmlStr := string(htmlBytes)
+
+	// 1. Verify ?decoy=raw logic and observability hooks exist in index.html
+	requiredElements := []string{
+		"isDecoyRaw",
+		"window.__DECOY_STATE = 'raw'",
+		"document.documentElement.dataset.decoy = 'raw'",
+		"Decoy inspection mode active (?decoy=raw)",
+	}
+	for _, elem := range requiredElements {
+		if !strings.Contains(htmlStr, elem) {
+			t.Errorf("index.html missing required decoy inspection logic: %s", elem)
+		}
+	}
+
+	// 2. Invariant: isDecoyRaw must precede isBot to ensure automated test suites enter decoy mode
+	idxDecoy := strings.Index(htmlStr, "else if (isDecoyRaw)")
+	idxBot := strings.Index(htmlStr, "else if (isBot)")
+	if idxDecoy == -1 {
+		t.Errorf("index.html missing 'else if (isDecoyRaw)' branch")
+	}
+	if idxBot == -1 {
+		t.Errorf("index.html missing 'else if (isBot)' branch")
+	}
+	if idxDecoy != -1 && idxBot != -1 && idxDecoy > idxBot {
+		t.Errorf("Precedence violation: 'isDecoyRaw' must precede 'isBot' in index.html execution branching")
+	}
+
+	// 3. Verify functions/_middleware.js handles decoy parameter
+	middlewareBytes, err := os.ReadFile("functions/_middleware.js")
+	if err != nil {
+		t.Fatalf("Failed to read functions/_middleware.js: %v", err)
+	}
+	middlewareStr := string(middlewareBytes)
+	if !strings.Contains(middlewareStr, `url.searchParams.get("decoy")?.trim().toLowerCase() === "raw"`) {
+		t.Errorf("functions/_middleware.js missing expected decoy parameter handling")
+	}
+
+	// 4. Verify tools/server/main.go handles decoy parameter
+	serverBytes, err := os.ReadFile("tools/server/main.go")
+	if err != nil {
+		t.Fatalf("Failed to read tools/server/main.go: %v", err)
+	}
+	serverStr := string(serverBytes)
+	if !strings.Contains(serverStr, `strings.EqualFold(strings.TrimSpace(r.URL.Query().Get("decoy")), "raw")`) {
+		t.Errorf("tools/server/main.go missing expected decoy parameter handling")
+	}
+}
+

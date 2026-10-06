@@ -86,6 +86,8 @@ func TestHandleRootHTML_XRobotsTag(t *testing.T) {
 		{"http://localhost:8080/?shield=blocked", true},
 		{"http://localhost:8080/?shield=legacy", true},
 		{"http://localhost:8080/?shield=js", true},
+		{"http://localhost:8080/?decoy=raw", true},
+		{"http://localhost:8080/?decoy=other", false},
 	}
 
 	sampleHTML := []byte("<!DOCTYPE html><html><head></head><body></body></html>")

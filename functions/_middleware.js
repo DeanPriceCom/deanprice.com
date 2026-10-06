@@ -137,7 +137,10 @@ export async function onRequest(context) {
   if (isAliasDomain) {
     headers.set("X-Robots-Tag", "noindex, nofollow, noarchive, nosnippet");
   } else {
-    const isTestOrError = isDevOrPreview && url.searchParams.has("shield");
+    const isTestOrError = isDevOrPreview && (
+      url.searchParams.has("shield") ||
+      url.searchParams.get("decoy")?.trim().toLowerCase() === "raw"
+    );
     if (isTestOrError) {
       headers.set("X-Robots-Tag", "noindex, nofollow, noarchive");
     }

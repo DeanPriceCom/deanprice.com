@@ -5,7 +5,7 @@
   Referrer-Policy: strict-origin-when-cross-origin
   Cross-Origin-Opener-Policy: same-origin
   Reporting-Endpoints: default="/api/report"
-  Content-Security-Policy: default-src 'self'; script-src 'self' 'wasm-unsafe-eval' 'sha256-HipH4ZIurc4OXDmWEPlCWXeOUA0ceyCAwFXojIVBtn0='; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data:; connect-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; require-trusted-types-for 'script'; trusted-types swPolicy 'allow-duplicates'; report-to default; report-uri /api/report;
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'wasm-unsafe-eval' 'sha256-sdJJ3T3wEHIFZMh+nYvg2l0S5J0OQZ0x3cqZ48gBAaI='; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data:; connect-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; require-trusted-types-for 'script'; trusted-types swPolicy 'allow-duplicates'; report-to default; report-uri /api/report;
   Permissions-Policy: camera=(), microphone=(), geolocation=(), browsing-topics=()
 
 # 2. WASM ENGINE & EXECUTOR

@@ -154,7 +154,7 @@ func handleRootHTML(w http.ResponseWriter, r *http.Request, htmlBytes []byte) {
 		w.Header().Set("X-Robots-Tag", "noindex, nofollow, noarchive, nosnippet")
 		reRobots := regexp.MustCompile(`<meta name="robots" content="[^"]*">`)
 		injected = reRobots.ReplaceAll(injected, []byte(`<meta name="robots" content="noindex, nofollow, noarchive, nosnippet">`))
-	} else if r.URL.Query().Has("shield") {
+	} else if r.URL.Query().Has("shield") || strings.EqualFold(strings.TrimSpace(r.URL.Query().Get("decoy")), "raw") {
 		w.Header().Set("X-Robots-Tag", "noindex, nofollow, noarchive")
 	}
 

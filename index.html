@@ -736,6 +736,10 @@
         var previewShield = isDevOrPreview ? params.get('shield') : null;
         var validShields = { 'blocked': 'blocked', 'legacy': 'legacy', 'js': 'js' };
         var activeShield = previewShield && validShields[previewShield.toLowerCase()];
+
+        // Decoy inspection switch (?decoy=raw) for visual verification and testing
+        var decoyParam = isDevOrPreview ? params.get('decoy') : null;
+        var isDecoyRaw = Boolean(decoyParam && decoyParam.trim().toLowerCase() === 'raw');
         var debugParam = isDevOrPreview ? params.get('debug') : null;
         var isDebugHud = Boolean(debugParam && debugParam.toLowerCase() === 'hud');
         var isBot = Boolean(navigator.webdriver) || /googlebot|google-inspectiontool|googleother|chrome-lighthouse|google-read-aloud|bingbot|yandexbot|baiduspider|duck(duck|assist)bot|seznambot|sogou.*spider|yeti|bytespider|amazonbot|youbot|ccbot|ai2bot|gptbot|chatgpt-user|oai-searchbot|grokbot|xai-grok|cohere-ai|anthropic-ai|claudebot|claude-user|claude-searchbot|claude-web|perplexitybot|meta-externalagent|applebot|ahrefsbot|semrushbot|dotbot|headlesschrome|screaming frog|ptst|gtmetrix/i.test(navigator.userAgent);
@@ -743,14 +747,19 @@
         // 1. Preview mode check runs FIRST (enables automated test inspection regardless of navigator.webdriver)
         if (activeShield) {
             triggerShield(activeShield);
+        } else if (isDecoyRaw) {
+            // 2. Decoy inspection state (?decoy=raw)
+            window.__DECOY_STATE = 'raw';
+            document.documentElement.dataset.decoy = 'raw';
+            console.log("Decoy inspection mode active (?decoy=raw). WebAssembly hydration bypassed.");
         } else if (isBot) {
-            // 2. Crawler check protects SEO indexing
+            // 3. Crawler check protects SEO indexing
             console.log("Bot detected. Retaining static fallback.");
         } else if (!window.WebAssembly || typeof window.WebAssembly.instantiate !== "function" || typeof window.BigInt === "undefined" || typeof window.BigInt64Array === "undefined") {
-            // 3. Immediate zero-overhead check for legacy browsers
+            // 4. Legacy browser fallback
             triggerShield('legacy');
         } else {
-            // 4. Modern browser runtime
+            // 5. Normal modern browser runtime
             function initWasm() {
                 try {
                     if (typeof Go === "undefined") throw new Error("wasm_exec.js failed to load.");
