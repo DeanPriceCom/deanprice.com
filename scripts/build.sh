@@ -21,9 +21,9 @@ if ! command -v tinygo >/dev/null 2>&1; then
         TINYGO_VERSION="0.41.1"
         if [ ! -d "${TOOLS_DIR}/tinygo/bin" ]; then
             echo "==> TinyGo not found in PATH. Downloading TinyGo v${TINYGO_VERSION}..."
-            curl -fsSL "https://github.com/tinygo-org/tinygo/releases/download/v${TINYGO_VERSION}/tinygo${TINYGO_VERSION}.linux-amd64.tar.gz" -o tinygo.tar.gz
-            tar -xzf tinygo.tar.gz -C "${TOOLS_DIR}"
-            rm -f tinygo.tar.gz
+            curl -fsSL "https://github.com/tinygo-org/tinygo/releases/download/v${TINYGO_VERSION}/tinygo${TINYGO_VERSION}.linux-amd64.tar.gz" -o "${TOOLS_DIR}/tinygo.tar.gz"
+            tar -xzf "${TOOLS_DIR}/tinygo.tar.gz" -C "${TOOLS_DIR}"
+            rm -f "${TOOLS_DIR}/tinygo.tar.gz"
         fi
         export PATH="${TOOLS_DIR}/tinygo/bin:${PATH}"
     fi
@@ -42,9 +42,9 @@ if ! command -v wasm-opt >/dev/null 2>&1; then
         BINARYEN_DIR="binaryen-${BINARYEN_VERSION}"
         if [ ! -d "${TOOLS_DIR}/${BINARYEN_DIR}/bin" ]; then
             echo "==> wasm-opt not found in PATH. Downloading Binaryen ${BINARYEN_VERSION}..."
-            curl -fsSL "https://github.com/WebAssembly/binaryen/releases/download/${BINARYEN_VERSION}/binaryen-${BINARYEN_VERSION}-x86_64-linux.tar.gz" -o binaryen.tar.gz
-            tar -xzf binaryen.tar.gz -C "${TOOLS_DIR}"
-            rm -f binaryen.tar.gz
+            curl -fsSL "https://github.com/WebAssembly/binaryen/releases/download/${BINARYEN_VERSION}/binaryen-${BINARYEN_VERSION}-x86_64-linux.tar.gz" -o "${TOOLS_DIR}/binaryen.tar.gz"
+            tar -xzf "${TOOLS_DIR}/binaryen.tar.gz" -C "${TOOLS_DIR}"
+            rm -f "${TOOLS_DIR}/binaryen.tar.gz"
         fi
         export PATH="${TOOLS_DIR}/${BINARYEN_DIR}/bin:${PATH}"
     fi

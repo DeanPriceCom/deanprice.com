@@ -67,16 +67,24 @@ func syncAssets() error {
 
 		iconDataURI := "data:image/webp;base64," + base64.StdEncoding.EncodeToString(imgBytes)
 
-		// Pattern matches <img src="data:image/webp;base64,..." width="123" height="123" alt="<Alt>"
-		pattern := regexp.MustCompile(`(<img\s+src=")data:image/webp;base64,[^"]*("\s+width="123"\s+height="123"\s+alt="` + regexp.QuoteMeta(icon.alt) + `")`)
-		if !pattern.MatchString(indexContent) {
-			return fmt.Errorf("image placeholder for alt=%q not found in %s", icon.alt, indexPath)
-		}
-
-		newContent := pattern.ReplaceAllString(indexContent, `${1}`+iconDataURI+`${2}`)
-		if newContent != indexContent {
-			indexContent = newContent
-			indexModified = true
+		// Pattern matches <img ... src="data:image/webp;base64,..." ... alt="<Alt>" ...> in any attribute order
+		pattern := regexp.MustCompile(`(?s)(<img\b[^>]*?\bsrc=")data:image/webp;base64,[^"]*("[^>]*?\balt="` + regexp.QuoteMeta(icon.alt) + `"[^>]*?>)`)
+		if pattern.MatchString(indexContent) {
+			newContent := pattern.ReplaceAllString(indexContent, `${1}`+iconDataURI+`${2}`)
+			if newContent != indexContent {
+				indexContent = newContent
+				indexModified = true
+			}
+		} else {
+			altFirstPattern := regexp.MustCompile(`(?s)(<img\b[^>]*?\balt="` + regexp.QuoteMeta(icon.alt) + `"[^>]*?\bsrc=")data:image/webp;base64,[^"]*("[^>]*?>)`)
+			if !altFirstPattern.MatchString(indexContent) {
+				return fmt.Errorf("image placeholder for alt=%q not found in %s", icon.alt, indexPath)
+			}
+			newContent := altFirstPattern.ReplaceAllString(indexContent, `${1}`+iconDataURI+`${2}`)
+			if newContent != indexContent {
+				indexContent = newContent
+				indexModified = true
+			}
 		}
 	}
 

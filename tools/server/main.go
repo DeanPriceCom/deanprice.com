@@ -81,7 +81,9 @@ func isAliasHost(host string) bool {
 		host = h
 	}
 	host = strings.TrimPrefix(strings.ToLower(strings.TrimSpace(host)), "www.")
-	return host == "deanprice.uk" || host == "deanprice.tr" || host == "deanprice.ie" ||
+	return host == "deanprice.uk" || strings.HasSuffix(host, ".deanprice.uk") ||
+		host == "deanprice.tr" || strings.HasSuffix(host, ".deanprice.tr") ||
+		host == "deanprice.ie" || strings.HasSuffix(host, ".deanprice.ie") ||
 		strings.HasSuffix(host, ".pages.dev")
 }
 
@@ -91,13 +93,13 @@ func extractCountry(r *http.Request) string {
 		host = h
 	}
 	host = strings.TrimPrefix(strings.ToLower(strings.TrimSpace(host)), "www.")
-	if strings.HasSuffix(host, ".tr") {
+	if host == "deanprice.tr" || strings.HasSuffix(host, ".deanprice.tr") {
 		return "TR"
 	}
-	if strings.HasSuffix(host, ".ie") {
+	if host == "deanprice.ie" || strings.HasSuffix(host, ".deanprice.ie") {
 		return "IE"
 	}
-	if strings.HasSuffix(host, ".uk") {
+	if host == "deanprice.uk" || strings.HasSuffix(host, ".deanprice.uk") {
 		return "GB"
 	}
 
@@ -106,6 +108,17 @@ func extractCountry(r *http.Request) string {
 		return strings.ToUpper(country)
 	}
 	return ""
+}
+
+func isBlockedDevPath(p string) bool {
+	clean := strings.TrimPrefix(path.Clean(p), "/")
+	parts := strings.Split(clean, "/")
+	firstSeg := strings.ToLower(parts[0])
+	if strings.HasPrefix(firstSeg, ".") || firstSeg == "internal" || firstSeg == "tools" || firstSeg == "scripts" {
+		return true
+	}
+	ext := strings.ToLower(filepath.Ext(clean))
+	return ext == ".go" || ext == ".mod" || ext == ".sum" || ext == ".env" || ext == ".sh"
 }
 
 func resolveBaseDir(useDist bool) string {
@@ -188,6 +201,18 @@ func newDevHandler(customBaseDir ...string) http.Handler {
 			}
 
 			handleRootHTML(w, r, htmlBytes)
+			return
+		}
+
+		if isBlockedDevPath(cleanPath) {
+			notFoundBytes, err404 := readServerFile(baseDir, "404.html")
+			if err404 == nil {
+				w.Header().Set("Content-Type", "text/html; charset=utf-8")
+				w.WriteHeader(http.StatusNotFound)
+				w.Write(notFoundBytes)
+				return
+			}
+			http.NotFound(w, r)
 			return
 		}
 

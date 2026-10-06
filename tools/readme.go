@@ -42,13 +42,19 @@ func updateReadmeWasmSizes() error {
 		return fmt.Errorf("failed to read README.md: %w", err)
 	}
 
-	re := regexp.MustCompile(`(?i)(\*\*)([0-9.]+)(\s*KB micro-WASM binary\*\*\s*\()([0-9.]+)(\s*KB gzipped)`)
-	if !re.Match(readmeBytes) {
-		return fmt.Errorf("could not find micro-WASM size pattern in README.md")
+	var updatedReadme []byte
+	commentRe := regexp.MustCompile(`(?s)<!-- wasm-size -->.*?<!-- /wasm-size -->`)
+	if commentRe.Match(readmeBytes) {
+		replacement := fmt.Sprintf("<!-- wasm-size -->**%.1f KB micro-WASM binary** (%.1f KB gzipped)<!-- /wasm-size -->", rawKB, gzKB)
+		updatedReadme = commentRe.ReplaceAll(readmeBytes, []byte(replacement))
+	} else {
+		re := regexp.MustCompile(`(?i)(\*\*)([0-9.]+)(\s*KB micro-WASM binary\*\*\s*\()([0-9.]+)(\s*KB gzipped)`)
+		if !re.Match(readmeBytes) {
+			return fmt.Errorf("could not find micro-WASM size pattern in README.md")
+		}
+		replacement := fmt.Sprintf("${1}%.1f${3}%.1f${5}", rawKB, gzKB)
+		updatedReadme = re.ReplaceAll(readmeBytes, []byte(replacement))
 	}
-
-	replacement := fmt.Sprintf("${1}%.1f${3}%.1f${5}", rawKB, gzKB)
-	updatedReadme := re.ReplaceAll(readmeBytes, []byte(replacement))
 
 	if bytes.Equal(readmeBytes, updatedReadme) {
 		fmt.Printf("README.md WASM sizes already up to date: %.1f KB (%.1f KB gzipped)\n", rawKB, gzKB)

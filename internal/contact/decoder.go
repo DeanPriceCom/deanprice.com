@@ -12,12 +12,12 @@ func ResolveContact(channel string, region string, rawHost string) string {
 	case "email":
 		return decrypt(emailBytes, rawHost, "email")
 	case "phone":
-		resolvedRegion := ResolveCountry(region)
+		resolvedRegion := ResolveCountryWithHost(region, rawHost)
 		if b, ok := phoneMap[resolvedRegion]; ok {
 			return decrypt(b, rawHost, "phone_"+resolvedRegion)
 		}
 	case "wa", "whatsapp":
-		resolvedRegion := ResolveCountry(region)
+		resolvedRegion := ResolveCountryWithHost(region, rawHost)
 		if b, ok := waMap[resolvedRegion]; ok {
 			return decrypt(b, rawHost, "wa_"+resolvedRegion)
 		}

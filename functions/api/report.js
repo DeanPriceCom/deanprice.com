@@ -272,11 +272,14 @@ async function sendDiscordNotification(webhookUrl, report) {
   };
 
   try {
-    await fetch(webhookUrl, {
+    const res = await fetch(webhookUrl, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload)
     });
+    if (!res.ok) {
+      console.warn(`[report.js] Webhook dispatch returned HTTP ${res.status}: ${res.statusText}`);
+    }
   } catch (err) {
     // Prevent unhandled webhook failures from crashing the worker
     console.warn("[report.js] Webhook dispatch error:", err);

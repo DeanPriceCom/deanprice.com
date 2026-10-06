@@ -161,6 +161,21 @@ func TestNewDevHandler_NotFound(t *testing.T) {
 	if !strings.Contains(w.Body.String(), "404") {
 		t.Errorf("expected 404.html content in response body")
 	}
+
+	blockedPaths := []string{
+		"http://localhost:8080/main.go",
+		"http://localhost:8080/go.mod",
+		"http://localhost:8080/internal/contact/data.go",
+		"http://localhost:8080/.env",
+	}
+	for _, p := range blockedPaths {
+		bReq := httptest.NewRequest("GET", p, nil)
+		bW := httptest.NewRecorder()
+		handler.ServeHTTP(bW, bReq)
+		if bW.Code != 404 {
+			t.Errorf("expected status 404 for blocked path %s, got %d", p, bW.Code)
+		}
+	}
 }
 
 func TestHandleRootHTML_AliasHosts(t *testing.T) {

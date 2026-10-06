@@ -524,3 +524,37 @@ func TestRobotsNoindexRouteParity(t *testing.T) {
 		}
 	}
 }
+
+func TestAliasRobotsParity(t *testing.T) {
+	middlewareBytes, err := os.ReadFile("functions/_middleware.js")
+	if err != nil {
+		t.Fatalf("Failed to read functions/_middleware.js: %v", err)
+	}
+	middlewareStr := strings.ReplaceAll(string(middlewareBytes), "\r\n", "\n")
+
+	serverBytes, err := os.ReadFile("tools/server/main.go")
+	if err != nil {
+		t.Fatalf("Failed to read tools/server/main.go: %v", err)
+	}
+	serverStr := strings.ReplaceAll(string(serverBytes), "\r\n", "\n")
+
+	reMiddleware := regexp.MustCompile("(?s)const ALIAS_ROBOTS_TXT = `(.*?)`;")
+	matchMiddleware := reMiddleware.FindStringSubmatch(middlewareStr)
+	if len(matchMiddleware) < 2 {
+		t.Fatalf("Failed to extract ALIAS_ROBOTS_TXT from functions/_middleware.js")
+	}
+
+	reServer := regexp.MustCompile("(?s)const aliasRobotsTxt = `(.*?)`")
+	matchServer := reServer.FindStringSubmatch(serverStr)
+	if len(matchServer) < 2 {
+		t.Fatalf("Failed to extract aliasRobotsTxt from tools/server/main.go")
+	}
+
+	aliasMiddleware := strings.TrimSpace(matchMiddleware[1])
+	aliasServer := strings.TrimSpace(matchServer[1])
+
+	if aliasMiddleware != aliasServer {
+		t.Errorf("Parity mismatch between functions/_middleware.js ALIAS_ROBOTS_TXT and tools/server/main.go aliasRobotsTxt!\nGot (middleware):\n%s\n\nWant (server):\n%s",
+			aliasMiddleware, aliasServer)
+	}
+}

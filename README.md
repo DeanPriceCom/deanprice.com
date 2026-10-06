@@ -26,7 +26,7 @@ A deliberately over-engineered personal identity card and systems sandbox. Engin
 ## 🏛️ Architectural Highlights
 
 ### 1. Micro-WebAssembly Runtime (TinyGo)
-* Compiled with **TinyGo** (`-opt=z -no-debug -panic=trap`) and post-optimised with Binaryen's `wasm-opt -Oz` into a **41.4 KB micro-WASM binary** (17.3 KB gzipped, compared to ~2.5 MB standard Go).
+* Compiled with **TinyGo** (`-opt=z -no-debug -panic=trap`) and post-optimised with Binaryen's `wasm-opt -Oz` into a <!-- wasm-size -->**43.9 KB micro-WASM binary** (18.7 KB gzipped)<!-- /wasm-size -->, compared to ~2.5 MB standard Go.
 * Stripped of the standard Go runtime scheduler, timer queues, reflection, and panic unwinding, executing in **<2 ms** directly inside the browser's native WebAssembly engine.
 
 ### 2. Domain-Bound Obfuscation & Scraper Resistance
@@ -57,11 +57,11 @@ A deliberately over-engineered personal identity card and systems sandbox. Engin
 Run the full test suite across all production domains, dev environments, and regional locales:
 
 ```bash
-# Run unit tests with cache bypassed
-go test -v -count=1 ./...
-
-# Regenerate ciphertexts and update CSP headers
+# 1. Regenerate ciphertexts and synchronize CSP headers
 go generate .
+
+# 2. Run unit tests with cache bypassed
+go test -v -count=1 ./...
 ```
 
 ---

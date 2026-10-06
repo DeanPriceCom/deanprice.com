@@ -309,6 +309,16 @@ func TestResolveContact(t *testing.T) {
 		{"phone", "IE", "deanprice.ie", expectedPhoneIE},
 		{"whatsapp", "IE", "deanprice.ie", expectedWAIE},
 		{"phone", "IE", "www.deanprice.ie", expectedPhoneIE},
+		// Empty region fallback to alias host localization
+		{"phone", "", "deanprice.uk", expectedPhoneGB},
+		{"whatsapp", "", "deanprice.uk", expectedWAGB},
+		{"phone", "", "www.deanprice.uk", expectedPhoneGB},
+		{"phone", "", "deanprice.tr", expectedPhoneTR},
+		{"whatsapp", "", "deanprice.tr", expectedWATR},
+		{"phone", "", "www.deanprice.tr", expectedPhoneTR},
+		{"phone", "", "deanprice.ie", expectedPhoneIE},
+		{"whatsapp", "", "deanprice.ie", expectedWAIE},
+		{"phone", "", "www.deanprice.ie", expectedPhoneIE},
 	}
 	for _, tt := range aliasTests {
 		t.Run(fmt.Sprintf("%s_%s_%s", tt.channel, tt.region, tt.host), func(t *testing.T) {
