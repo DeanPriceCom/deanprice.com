@@ -612,4 +612,3 @@ func TestDecoyInspectionIntegrity(t *testing.T) {
 		t.Errorf("tools/server/main.go missing expected decoy parameter handling")
 	}
 }
-
