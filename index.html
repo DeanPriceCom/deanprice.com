@@ -742,7 +742,7 @@
         var isDecoyRaw = Boolean(decoyParam && decoyParam.trim().toLowerCase() === 'raw');
         var debugParam = isDevOrPreview ? params.get('debug') : null;
         var isDebugHud = Boolean(debugParam && debugParam.toLowerCase() === 'hud');
-        var isBot = Boolean(navigator.webdriver) || /googlebot|google-inspectiontool|googleother|chrome-lighthouse|google-read-aloud|bingbot|yandexbot|baiduspider|duck(duck|assist)bot|seznambot|sogou.*spider|yeti|bytespider|amazonbot|youbot|ccbot|ai2bot|gptbot|chatgpt-user|oai-searchbot|grokbot|xai-grok|cohere-ai|anthropic-ai|claudebot|claude-user|claude-searchbot|claude-web|perplexitybot|meta-externalagent|applebot|ahrefsbot|semrushbot|dotbot|headlesschrome|screaming frog|ptst|gtmetrix/i.test(navigator.userAgent);
+        var isBot = Boolean(navigator.webdriver) || /googlebot|google-inspectiontool|google-agent|gemini-deep-research|google-(gemininotebook|notebooklm)|googleother|chrome-lighthouse|google-read-aloud|bingbot|yandexbot|baiduspider|duck(duck|assist)bot|seznambot|sogou.*spider|yeti|bytespider|amazonbot|youbot|ccbot|ai2bot|gptbot|chatgpt-user|oai-searchbot|grokbot|xai-grok|cohere-ai|anthropic-ai|claudebot|claude-user|claude-searchbot|claude-web|perplexitybot|meta-externalagent|applebot|ahrefsbot|semrushbot|dotbot|headlesschrome|screaming frog|ptst|gtmetrix/i.test(navigator.userAgent);
 
         // 1. Preview mode check runs FIRST (enables automated test inspection regardless of navigator.webdriver)
         if (activeShield) {

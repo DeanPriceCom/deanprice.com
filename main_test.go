@@ -612,3 +612,70 @@ func TestDecoyInspectionIntegrity(t *testing.T) {
 		t.Errorf("tools/server/main.go missing expected decoy parameter handling")
 	}
 }
+
+func TestCrawlerParityIntegrity(t *testing.T) {
+	htmlBytes, err := os.ReadFile("index.html")
+	if err != nil {
+		t.Fatalf("Failed to read index.html: %v", err)
+	}
+	htmlStr := string(htmlBytes)
+
+	robotsBytes, err := os.ReadFile("robots.txt")
+	if err != nil {
+		t.Fatalf("Failed to read robots.txt: %v", err)
+	}
+	robotsStr := string(robotsBytes)
+
+	// 1. Extract and compile the client-side isBot regex pattern
+	reRegex := regexp.MustCompile(`\|\|\s*/([^/]+)/i\.test`)
+	match := reRegex.FindStringSubmatch(htmlStr)
+	if len(match) < 2 {
+		t.Fatalf("Failed to extract isBot regex pattern from index.html")
+	}
+
+	botRegex, err := regexp.Compile("(?i)" + match[1])
+	if err != nil {
+		t.Fatalf("Failed to compile extracted isBot regex %q: %v", match[1], err)
+	}
+
+	// 2. Define the core approved generative AI & search crawlers
+	crawlersToVerify := []struct {
+		name      string
+		token     string
+		userAgent string
+	}{
+		{"Googlebot", "Googlebot", "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)"},
+		{"Google-InspectionTool", "Google-InspectionTool", "Mozilla/5.0 (compatible; Google-InspectionTool/1.0;)"},
+		{"Google-Agent", "Google-Agent", "Mozilla/5.0 (compatible; Google-Agent/1.0; +https://developers.google.com)"},
+		{"Gemini-Deep-Research", "Gemini-Deep-Research", "Mozilla/5.0 (compatible; Gemini-Deep-Research/1.0;)"},
+		{"GoogleOther", "GoogleOther", "Mozilla/5.0 (compatible; GoogleOther/1.0;)"},
+		{"Google-GeminiNotebook", "Google-GeminiNotebook", "Mozilla/5.0 (compatible; Google-GeminiNotebook)"},
+		{"Google-NotebookLM", "Google-NotebookLM", "Mozilla/5.0 (compatible; Google-NotebookLM)"},
+		{"GPTBot", "GPTBot", "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; GPTBot/1.2; +https://openai.com/gptbot)"},
+		{"ChatGPT-User", "ChatGPT-User", "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; ChatGPT-User/1.0; +https://openai.com/bot)"},
+		{"OAI-SearchBot", "OAI-SearchBot", "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; OAI-SearchBot/1.0; +https://openai.com/searchbot)"},
+		{"ClaudeBot", "ClaudeBot", "Mozilla/5.0 (compatible; ClaudeBot/1.0; +claudebot@anthropic.com)"},
+		{"Claude-User", "Claude-User", "Mozilla/5.0 (compatible; Claude-User/1.0; +claudebot@anthropic.com)"},
+		{"Claude-SearchBot", "Claude-SearchBot", "Mozilla/5.0 (compatible; Claude-SearchBot/1.0; +claudebot@anthropic.com)"},
+		{"PerplexityBot", "PerplexityBot", "Mozilla/5.0 (compatible; PerplexityBot/1.0; +https://perplexity.ai/perplexitybot)"},
+	}
+
+	// Extract Section 1 (VIP) of robots.txt
+	vipSection := robotsStr
+	if idx := strings.Index(robotsStr, "# --- 2. THE WALL"); idx != -1 {
+		vipSection = robotsStr[:idx]
+	}
+
+	for _, crawler := range crawlersToVerify {
+		// Verify presence in robots.txt VIP section
+		expectedDirective := "User-agent: " + crawler.token
+		if !strings.Contains(vipSection, expectedDirective) {
+			t.Errorf("robots.txt VIP section missing %q", expectedDirective)
+		}
+
+		// Verify behavioral match against client-side isBot regex
+		if !botRegex.MatchString(crawler.userAgent) {
+			t.Errorf("index.html isBot regex failed to detect User-Agent for %s: %q", crawler.name, crawler.userAgent)
+		}
+	}
+}

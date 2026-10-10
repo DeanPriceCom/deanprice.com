@@ -6,6 +6,11 @@
 User-agent: Googlebot
 User-agent: Google-Extended
 User-agent: Google-InspectionTool
+User-agent: Google-Agent
+User-agent: Gemini-Deep-Research
+User-agent: GoogleOther
+User-agent: Google-GeminiNotebook
+User-agent: Google-NotebookLM
 User-agent: Bingbot
 User-agent: DuckDuckBot
 User-agent: DuckAssistBot

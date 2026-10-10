@@ -33,6 +33,11 @@ User-agent: GPTBot
 User-agent: ChatGPT-User
 User-agent: ClaudeBot
 User-agent: Claude-User
+User-agent: Google-Agent
+User-agent: Gemini-Deep-Research
+User-agent: Google-GeminiNotebook
+User-agent: Google-NotebookLM
+User-agent: GoogleOther
 User-agent: CCBot
 User-agent: PerplexityBot
 User-agent: Bytespider
