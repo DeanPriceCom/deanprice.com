@@ -644,6 +644,7 @@ func TestCrawlerParityIntegrity(t *testing.T) {
 		token     string
 		userAgent string
 	}{
+		// Google Ecosystem (7)
 		{"Googlebot", "Googlebot", "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)"},
 		{"Google-InspectionTool", "Google-InspectionTool", "Mozilla/5.0 (compatible; Google-InspectionTool/1.0;)"},
 		{"Google-Agent", "Google-Agent", "Mozilla/5.0 (compatible; Google-Agent/1.0; +https://developers.google.com)"},
@@ -651,13 +652,30 @@ func TestCrawlerParityIntegrity(t *testing.T) {
 		{"GoogleOther", "GoogleOther", "Mozilla/5.0 (compatible; GoogleOther/1.0;)"},
 		{"Google-GeminiNotebook", "Google-GeminiNotebook", "Mozilla/5.0 (compatible; Google-GeminiNotebook)"},
 		{"Google-NotebookLM", "Google-NotebookLM", "Mozilla/5.0 (compatible; Google-NotebookLM)"},
+		// OpenAI (3)
 		{"GPTBot", "GPTBot", "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; GPTBot/1.2; +https://openai.com/gptbot)"},
 		{"ChatGPT-User", "ChatGPT-User", "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; ChatGPT-User/1.0; +https://openai.com/bot)"},
 		{"OAI-SearchBot", "OAI-SearchBot", "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; OAI-SearchBot/1.0; +https://openai.com/searchbot)"},
+		// Anthropic (3)
 		{"ClaudeBot", "ClaudeBot", "Mozilla/5.0 (compatible; ClaudeBot/1.0; +claudebot@anthropic.com)"},
 		{"Claude-User", "Claude-User", "Mozilla/5.0 (compatible; Claude-User/1.0; +claudebot@anthropic.com)"},
 		{"Claude-SearchBot", "Claude-SearchBot", "Mozilla/5.0 (compatible; Claude-SearchBot/1.0; +claudebot@anthropic.com)"},
+		// xAI (2)
+		{"GrokBot", "GrokBot", "Mozilla/5.0 (compatible; GrokBot/1.0)"},
+		{"xAI-Grok", "xAI-Grok", "Mozilla/5.0 (compatible; xAI-Grok/1.0)"},
+		// Perplexity (1)
 		{"PerplexityBot", "PerplexityBot", "Mozilla/5.0 (compatible; PerplexityBot/1.0; +https://perplexity.ai/perplexitybot)"},
+		// Core Search Engines (2)
+		{"Bingbot", "Bingbot", "Mozilla/5.0 (compatible; bingbot/2.0; +http://www.bing.com/bingbot.htm)"},
+		{"Applebot", "Applebot", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Safari/605.1.15 (Applebot/0.1; +http://www.apple.com/go/applebot)"},
+		// Frontier & Foundation AI Crawlers (7)
+		{"meta-externalagent", "meta-externalagent", "Mozilla/5.0 (compatible; meta-externalagent/1.1; +https://developers.facebook.com/docs/sharing/webmasters/crawler)"},
+		{"Bytespider", "Bytespider", "Mozilla/5.0 (compatible; Bytespider; https://zhanzhang.toutiao.com/)"},
+		{"cohere-ai", "cohere-ai", "Mozilla/5.0 (compatible; cohere-ai/1.0; +https://cohere.com/bot)"},
+		{"Amazonbot", "Amazonbot", "Mozilla/5.0 (compatible; Amazonbot/0.1; +https://developer.amazon.com/support/amazonbot)"},
+		{"YouBot", "YouBot", "Mozilla/5.0 (compatible; YouBot/1.0; +https://you.com/crawler)"},
+		{"AI2Bot", "AI2Bot", "Mozilla/5.0 (compatible; AI2Bot/1.0; +https://allenai.org/crawler)"},
+		{"CCBot", "CCBot", "CCBot/2.0 (https://commoncrawl.org/faq/)"},
 	}
 
 	// Extract Section 1 (VIP) of robots.txt

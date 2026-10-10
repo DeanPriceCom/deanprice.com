@@ -16,8 +16,13 @@ class RobotsRewriter {
 const ALIAS_ROBOTS_TXT = `# Disallow AI models, training scrapers, and web archives
 User-agent: GPTBot
 User-agent: ChatGPT-User
+User-agent: OAI-SearchBot
 User-agent: ClaudeBot
 User-agent: Claude-User
+User-agent: Claude-SearchBot
+User-agent: GrokBot
+User-agent: xAI-Grok
+User-agent: Applebot-Extended
 User-agent: Google-Agent
 User-agent: Gemini-Deep-Research
 User-agent: Google-GeminiNotebook
