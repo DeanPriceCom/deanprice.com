@@ -30,6 +30,9 @@ User-agent: Google-NotebookLM
 User-agent: GoogleOther
 User-agent: CCBot
 User-agent: PerplexityBot
+User-agent: Perplexity-User
+User-agent: MistralAI-User
+User-agent: MistralAI-Index
 User-agent: Bytespider
 User-agent: Amazonbot
 User-agent: meta-externalagent
@@ -44,6 +47,7 @@ Disallow: /
 
 # Allow Search Indexers and Social Bots to fetch root so they read noindex & OG tags
 User-agent: Googlebot
+User-agent: Bravebot
 User-agent: Bingbot
 User-agent: WhatsApp
 User-agent: TelegramBot
@@ -55,6 +59,7 @@ User-agent: Facebot
 User-agent: Slackbot
 User-agent: Slackbot-LinkExpanding
 User-agent: Discordbot
+User-agent: Brave-CommandBot
 Allow: /$
 Allow: /index.html
 Allow: /manifest.json

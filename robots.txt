@@ -11,6 +11,7 @@ User-agent: Gemini-Deep-Research
 User-agent: GoogleOther
 User-agent: Google-GeminiNotebook
 User-agent: Google-NotebookLM
+User-agent: Bravebot
 User-agent: Bingbot
 User-agent: DuckDuckBot
 User-agent: DuckAssistBot
@@ -24,6 +25,7 @@ User-agent: LinkedInBot
 User-agent: Pinterestbot
 User-agent: Bytespider
 User-agent: Discordbot
+User-agent: Brave-CommandBot
 User-agent: Slackbot
 User-agent: Slackbot-LinkExpanding
 User-agent: TelegramBot
@@ -37,6 +39,9 @@ User-agent: Claude-SearchBot
 User-agent: GrokBot
 User-agent: xAI-Grok
 User-agent: PerplexityBot
+User-agent: Perplexity-User
+User-agent: MistralAI-User
+User-agent: MistralAI-Index
 User-agent: CCBot
 User-agent: meta-externalagent
 User-agent: cohere-ai
