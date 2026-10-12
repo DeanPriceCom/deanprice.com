@@ -644,10 +644,11 @@ func TestCrawlerParityIntegrity(t *testing.T) {
 		token     string
 		userAgent string
 	}{
-		// Google Ecosystem (7)
+		// Google Ecosystem (8)
 		{"Googlebot", "Googlebot", "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)"},
 		{"Google-InspectionTool", "Google-InspectionTool", "Mozilla/5.0 (compatible; Google-InspectionTool/1.0;)"},
 		{"Google-Agent", "Google-Agent", "Mozilla/5.0 (compatible; Google-Agent/1.0; +https://developers.google.com)"},
+		{"Google-Lens", "Google-Lens", "Google-Lens"},
 		{"Gemini-Deep-Research", "Gemini-Deep-Research", "Mozilla/5.0 (compatible; Gemini-Deep-Research/1.0;)"},
 		{"GoogleOther", "GoogleOther", "Mozilla/5.0 (compatible; GoogleOther/1.0;)"},
 		{"Google-GeminiNotebook", "Google-GeminiNotebook", "Mozilla/5.0 (compatible; Google-GeminiNotebook)"},

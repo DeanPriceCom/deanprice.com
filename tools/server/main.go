@@ -39,6 +39,7 @@ User-agent: GrokBot
 User-agent: xAI-Grok
 User-agent: Applebot-Extended
 User-agent: Google-Agent
+User-agent: Google-Lens
 User-agent: Gemini-Deep-Research
 User-agent: Google-GeminiNotebook
 User-agent: Google-NotebookLM

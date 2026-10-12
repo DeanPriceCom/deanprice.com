@@ -7,6 +7,7 @@ User-agent: Googlebot
 User-agent: Google-Extended
 User-agent: Google-InspectionTool
 User-agent: Google-Agent
+User-agent: Google-Lens
 User-agent: Gemini-Deep-Research
 User-agent: GoogleOther
 User-agent: Google-GeminiNotebook
