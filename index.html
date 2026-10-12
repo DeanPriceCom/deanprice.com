@@ -783,12 +783,17 @@
                         contactChannels.forEach(function (channel) {
                             var elements = document.querySelectorAll('[data-contact="' + channel + '"]');
                             var resolved = (typeof window.getWasmContact === 'function') ? window.getWasmContact(channel) : null;
+                            var isValid = resolved && (
+                                resolved.indexOf('mailto:') === 0 ||
+                                resolved.indexOf('tel:') === 0 ||
+                                resolved.indexOf('https://wa.me/') === 0
+                            );
                             elements.forEach(function (el) {
-                                if (resolved) {
+                                if (isValid) {
                                     el.setAttribute('href', resolved);
+                                    el.removeAttribute('tabindex');
+                                    el.removeAttribute('aria-disabled');
                                 }
-                                el.removeAttribute('tabindex');
-                                el.removeAttribute('aria-disabled');
                             });
                         });
 
@@ -954,9 +959,9 @@
                             'HTML: clientH=' + document.documentElement.clientHeight + ' offsetH=' + document.documentElement.offsetHeight + ' cssH=' + htmlStyle.height,
                             'Body: clientH=' + document.body.clientHeight + ' offsetH=' + document.body.offsetHeight + ' cssH=' + bodyStyle.height,
                             'PC: h=' + (pcRect ? pcRect.height.toFixed(1) : 'null') + ' cssH=' + (pcStyle ? pcStyle.height : '') + ' minH=' + (pcStyle ? pcStyle.minHeight : ''),
-                            'Main: top=' + (mainRect ? mainRect.top.toFixed(1) : 'null') + ' h=' + (mainRect.height ? mainRect.height.toFixed(1) : 'null') + ' btm=' + (mainRect.bottom ? mainRect.bottom.toFixed(1) : 'null'),
+                            'Main: top=' + (mainRect ? mainRect.top.toFixed(1) : 'null') + ' h=' + (mainRect ? mainRect.height.toFixed(1) : 'null') + ' btm=' + (mainRect ? mainRect.bottom.toFixed(1) : 'null'),
                             'Main Margins: T=' + (mainStyle ? mainStyle.marginTop : '') + ' B=' + (mainStyle ? mainStyle.marginBottom : ''),
-                            'Footer: top=' + (footRect ? footRect.top.toFixed(1) : 'null') + ' h=' + (footRect.height ? footRect.height.toFixed(1) : 'null') + ' btm=' + (footRect.bottom ? footRect.bottom.toFixed(1) : 'null'),
+                            'Footer: top=' + (footRect ? footRect.top.toFixed(1) : 'null') + ' h=' + (footRect ? footRect.height.toFixed(1) : 'null') + ' btm=' + (footRect ? footRect.bottom.toFixed(1) : 'null'),
                             '---',
                             'GAP BELOW FOOTER: ' + (footRect ? (window.innerHeight - footRect.bottom).toFixed(1) + 'px' : 'N/A'),
                             'SW State: ' + swStatus,

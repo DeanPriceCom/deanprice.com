@@ -75,7 +75,7 @@ self.addEventListener('fetch', (event) => {
         const timeoutPromise = new Promise((resolve) => setTimeout(resolve, TIMEOUT_MS));
         const fetchPromise = fetch(event.request).then(async (response) => {
           if (response && response.ok) {
-            await cache.put(event.request, response.clone());
+            await cache.put('/', response.clone());
           }
           return response;
         }).catch(() => null);
