@@ -1,10 +1,10 @@
 # Dean Price — Personal Web Application
 
 [![CI](https://github.com/DeanPriceCom/deanprice.com/actions/workflows/ci.yml/badge.svg)](https://github.com/DeanPriceCom/deanprice.com/actions/workflows/ci.yml)
-[![Go Test](https://img.shields.io/badge/Go-1.24-00ADD8?logo=go&logoColor=white)](https://golang.org)
+[![Go Test](https://img.shields.io/badge/Go-1.24-00ADD8?logo=go&logoColor=white)](https://go.dev)
 [![TinyGo](https://img.shields.io/badge/Compiled_with-TinyGo-blue)](https://tinygo.org)
 [![WebAssembly](https://img.shields.io/badge/WebAssembly-WASM-654FF0?logo=webassembly&logoColor=white)](https://webassembly.org)
-[![Cloudflare](https://img.shields.io/badge/Cloudflare-Pages_&_Edge_Functions-F38020?logo=cloudflare&logoColor=white)](https://pages.cloudflare.com)
+[![Cloudflare](https://img.shields.io/badge/Cloudflare-Pages_&_Edge_Functions-F38020?logo=cloudflare&logoColor=white)](https://pages.cloudflare.com/)
 
 A deliberately over-engineered personal identity card and systems sandbox. Engineered to explore the limits of TinyGo WebAssembly binary compression (sub-50 KB), Cloudflare Edge stream rewriting, and client-side scraper mitigation—without sacrificing millisecond render times or accessibility.
 
