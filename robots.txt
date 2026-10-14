@@ -4,14 +4,8 @@
 
 # --- 1. THE VIP BOTS (Search Engines & Approved AI) ---
 User-agent: Googlebot
-User-agent: Google-Extended
 User-agent: Google-InspectionTool
-User-agent: Google-Agent
 User-agent: Google-Lens
-User-agent: Gemini-Deep-Research
-User-agent: GoogleOther
-User-agent: Google-GeminiNotebook
-User-agent: Google-NotebookLM
 User-agent: Bravebot
 User-agent: Bingbot
 User-agent: DuckDuckBot
@@ -85,6 +79,15 @@ Disallow: /
 # --- 1.1 MISTRAL AI (Dedicated Allow for standard RFC 9309 prefix parser) ---
 User-agent: MistralAI-User
 User-agent: MistralAI-Index
+Allow: /
+
+# --- 1.2 GOOGLE & GEMINI AI AGENTS (Dedicated Allow for Google-Extended & Deep Research) ---
+User-agent: Google-Extended
+User-agent: Google-Agent
+User-agent: Gemini-Deep-Research
+User-agent: GoogleOther
+User-agent: Google-GeminiNotebook
+User-agent: Google-NotebookLM
 Allow: /
 
 # --- 2. THE WALL (Everyone Else) ---
