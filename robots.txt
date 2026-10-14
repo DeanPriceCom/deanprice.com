@@ -41,8 +41,6 @@ User-agent: GrokBot
 User-agent: xAI-Grok
 User-agent: PerplexityBot
 User-agent: Perplexity-User
-User-agent: MistralAI-User
-User-agent: MistralAI-Index
 User-agent: CCBot
 User-agent: meta-externalagent
 User-agent: cohere-ai
@@ -83,6 +81,11 @@ Allow: /sw.js
 
 # Default Deny: Block all paths not explicitly allowed above
 Disallow: /
+
+# --- 1.1 MISTRAL AI (Dedicated Allow for standard RFC 9309 prefix parser) ---
+User-agent: MistralAI-User
+User-agent: MistralAI-Index
+Allow: /
 
 # --- 2. THE WALL (Everyone Else) ---
 # Catch-all for unknown scrapers, archive bots, and unverified AI
