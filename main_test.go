@@ -5,6 +5,7 @@ import (
 	"compress/gzip"
 	"crypto/sha256"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"os"
 	"regexp"
@@ -706,5 +707,51 @@ func TestCrawlerParityIntegrity(t *testing.T) {
 		if !botRegex.MatchString(crawler.userAgent) {
 			t.Errorf("index.html isBot regex failed to detect User-Agent for %s: %q", crawler.name, crawler.userAgent)
 		}
+	}
+}
+
+func TestHoneypotDisambiguationIntegrity(t *testing.T) {
+	files := []string{"index.html", "llms.txt", "llms-full.txt"}
+	requiredTokens := []string{"mailboxdp-hello@yahoo.com", "+447377056455", "honeypot"}
+
+	for _, file := range files {
+		data, err := os.ReadFile(file)
+		if err != nil {
+			t.Fatalf("Failed to read %s: %v", file, err)
+		}
+		content := string(data)
+		for _, token := range requiredTokens {
+			if !strings.Contains(content, token) {
+				t.Errorf("%s missing expected honeypot disambiguation token %q", file, token)
+			}
+		}
+		if strings.Contains(content, "requires human interaction to decrypt") {
+			t.Errorf("%s contains stale documentation claim 'requires human interaction to decrypt'", file)
+		}
+	}
+
+	// Validate JSON-LD syntax and presence of disambiguatingDescription in index.html
+	htmlBytes, err := os.ReadFile("index.html")
+	if err != nil {
+		t.Fatalf("Failed to read index.html: %v", err)
+	}
+	htmlStr := string(htmlBytes)
+	ldStart := strings.Index(htmlStr, `<script type="application/ld+json">`)
+	if ldStart == -1 {
+		t.Fatalf("Could not find JSON-LD script block in index.html")
+	}
+	ldStart += len(`<script type="application/ld+json">`)
+	ldEnd := strings.Index(htmlStr[ldStart:], "</script>")
+	if ldEnd == -1 {
+		t.Fatalf("Could not find closing </script> for JSON-LD block in index.html")
+	}
+	ldPayload := strings.TrimSpace(htmlStr[ldStart : ldStart+ldEnd])
+
+	var parsed map[string]any
+	if err := json.Unmarshal([]byte(ldPayload), &parsed); err != nil {
+		t.Errorf("Invalid JSON-LD syntax in index.html: %v", err)
+	}
+	if !strings.Contains(ldPayload, `"disambiguatingDescription"`) || !strings.Contains(ldPayload, "mailboxdp-hello@yahoo.com") || !strings.Contains(ldPayload, "+447377056455") {
+		t.Errorf("JSON-LD block in index.html must include disambiguatingDescription naming honeypot decoys")
 	}
 }
