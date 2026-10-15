@@ -44,6 +44,11 @@ User-agent: ia_archiver
 User-agent: archive.org_bot
 User-agent: special_archiver
 User-agent: archive.today
+User-agent: DeepSeekBot
+User-agent: Grok-Web
+User-agent: xAI-Bot
+User-agent: xAI-SearchBot
+User-agent: meta-externalfetcher
 Disallow: /
 
 # Allow Search Indexers and Social Bots to fetch root so they read noindex & OG tags

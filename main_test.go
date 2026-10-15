@@ -661,9 +661,12 @@ func TestCrawlerParityIntegrity(t *testing.T) {
 		{"ClaudeBot", "ClaudeBot", "Mozilla/5.0 (compatible; ClaudeBot/1.0; +claudebot@anthropic.com)"},
 		{"Claude-User", "Claude-User", "Mozilla/5.0 (compatible; Claude-User/1.0; +claudebot@anthropic.com)"},
 		{"Claude-SearchBot", "Claude-SearchBot", "Mozilla/5.0 (compatible; Claude-SearchBot/1.0; +claudebot@anthropic.com)"},
-		// xAI (2)
+		// xAI (5)
 		{"GrokBot", "GrokBot", "Mozilla/5.0 (compatible; GrokBot/1.0)"},
+		{"Grok-Web", "Grok-Web", "Mozilla/5.0 (compatible; Grok-Web/1.0)"},
 		{"xAI-Grok", "xAI-Grok", "Mozilla/5.0 (compatible; xAI-Grok/1.0)"},
+		{"xAI-Bot", "xAI-Bot", "Mozilla/5.0 (compatible; xAI-Bot/1.0; +https://x.ai)"},
+		{"xAI-SearchBot", "xAI-SearchBot", "Mozilla/5.0 (compatible; xAI-SearchBot/1.0; +https://x.ai)"},
 		// Perplexity (2)
 		{"PerplexityBot", "PerplexityBot", "Mozilla/5.0 (compatible; PerplexityBot/1.0; +https://perplexity.ai/perplexitybot)"},
 		{"Perplexity-User", "Perplexity-User", "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; Perplexity-User/1.0; +https://perplexity.ai/perplexity-user)"},
@@ -674,10 +677,12 @@ func TestCrawlerParityIntegrity(t *testing.T) {
 		{"Bravebot", "Bravebot", "Mozilla/5.0 (compatible; Bravebot/1.0; +https://brave.com/search/crawler/)"},
 		{"Bingbot", "Bingbot", "Mozilla/5.0 (compatible; bingbot/2.0; +http://www.bing.com/bingbot.htm)"},
 		{"Applebot", "Applebot", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Safari/605.1.15 (Applebot/0.1; +http://www.apple.com/go/applebot)"},
-		// Frontier & Foundation AI Crawlers (7)
+		// Frontier & Foundation AI Crawlers (9)
 		{"meta-externalagent", "meta-externalagent", "Mozilla/5.0 (compatible; meta-externalagent/1.1; +https://developers.facebook.com/docs/sharing/webmasters/crawler)"},
+		{"meta-externalfetcher", "meta-externalfetcher", "meta-externalfetcher/1.1 (+https://developers.facebook.com/docs/sharing/webmasters/web-crawlers)"},
 		{"Bytespider", "Bytespider", "Mozilla/5.0 (compatible; Bytespider; https://zhanzhang.toutiao.com/)"},
 		{"cohere-ai", "cohere-ai", "Mozilla/5.0 (compatible; cohere-ai/1.0; +https://cohere.com/bot)"},
+		{"DeepSeekBot", "DeepSeekBot", "Mozilla/5.0 (compatible; DeepSeekBot/1.0; +https://www.deepseek.com)"},
 		{"Amazonbot", "Amazonbot", "Mozilla/5.0 (compatible; Amazonbot/0.1; +https://developer.amazon.com/support/amazonbot)"},
 		{"YouBot", "YouBot", "Mozilla/5.0 (compatible; YouBot/1.0; +https://you.com/crawler)"},
 		{"AI2Bot", "AI2Bot", "Mozilla/5.0 (compatible; AI2Bot/1.0; +https://allenai.org/crawler)"},
