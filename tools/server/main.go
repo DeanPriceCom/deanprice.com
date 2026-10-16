@@ -38,7 +38,10 @@ User-agent: Claude-SearchBot
 User-agent: GrokBot
 User-agent: xAI-Grok
 User-agent: Applebot-Extended
+User-agent: DuckAssistBot
+User-agent: Google-Extended
 User-agent: Google-Agent
+User-agent: Google-CloudVertexBot
 User-agent: Google-Lens
 User-agent: Gemini-Deep-Research
 User-agent: Google-GeminiNotebook
@@ -175,8 +178,11 @@ func handleRootHTML(w http.ResponseWriter, r *http.Request, htmlBytes []byte) {
 		w.Header().Set("X-Robots-Tag", "noindex, nofollow, noarchive, nosnippet")
 		reRobots := regexp.MustCompile(`<meta name="robots" content="[^"]*">`)
 		injected = reRobots.ReplaceAll(injected, []byte(`<meta name="robots" content="noindex, nofollow, noarchive, nosnippet">`))
-	} else if r.URL.Query().Has("shield") || strings.EqualFold(strings.TrimSpace(r.URL.Query().Get("decoy")), "raw") {
-		w.Header().Set("X-Robots-Tag", "noindex, nofollow, noarchive")
+	} else {
+		w.Header().Set("Link", `</llms.txt>; rel="alternate"; type="text/plain"; title="LLM Context", </llms-full.txt>; rel="alternate"; type="text/plain"; title="LLM Full Context"`)
+		if r.URL.Query().Has("shield") || strings.EqualFold(strings.TrimSpace(r.URL.Query().Get("decoy")), "raw") {
+			w.Header().Set("X-Robots-Tag", "noindex, nofollow, noarchive")
+		}
 	}
 
 	w.WriteHeader(http.StatusOK)

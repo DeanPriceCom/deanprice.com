@@ -23,7 +23,10 @@ User-agent: Claude-SearchBot
 User-agent: GrokBot
 User-agent: xAI-Grok
 User-agent: Applebot-Extended
+User-agent: DuckAssistBot
+User-agent: Google-Extended
 User-agent: Google-Agent
+User-agent: Google-CloudVertexBot
 User-agent: Google-Lens
 User-agent: Gemini-Deep-Research
 User-agent: Google-GeminiNotebook
@@ -158,6 +161,7 @@ export async function onRequest(context) {
   if (isAliasDomain) {
     headers.set("X-Robots-Tag", "noindex, nofollow, noarchive, nosnippet");
   } else {
+    headers.set("Link", '</llms.txt>; rel="alternate"; type="text/plain"; title="LLM Context", </llms-full.txt>; rel="alternate"; type="text/plain"; title="LLM Full Context"');
     const isTestOrError = isDevOrPreview && (
       url.searchParams.has("shield") ||
       url.searchParams.get("decoy")?.trim().toLowerCase() === "raw"

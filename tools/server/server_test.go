@@ -108,6 +108,12 @@ func TestHandleRootHTML_XRobotsTag(t *testing.T) {
 					t.Errorf("expected no X-Robots-Tag, got %q", got)
 				}
 			}
+
+			gotLink := w.Header().Get("Link")
+			expectedLink := `</llms.txt>; rel="alternate"; type="text/plain"; title="LLM Context", </llms-full.txt>; rel="alternate"; type="text/plain"; title="LLM Full Context"`
+			if gotLink != expectedLink {
+				t.Errorf("expected Link header %q on primary host, got %q", expectedLink, gotLink)
+			}
 		})
 	}
 }
@@ -199,6 +205,9 @@ func TestHandleRootHTML_AliasHosts(t *testing.T) {
 
 			if got := w.Header().Get("X-Robots-Tag"); got != "noindex, nofollow, noarchive, nosnippet" {
 				t.Errorf("expected X-Robots-Tag: noindex, nofollow, noarchive, nosnippet, got %q", got)
+			}
+			if gotLink := w.Header().Get("Link"); gotLink != "" {
+				t.Errorf("expected no Link header on alias host %s, got %q", hostURL, gotLink)
 			}
 			if !strings.Contains(w.Body.String(), `<meta name="robots" content="noindex, nofollow, noarchive, nosnippet">`) {
 				t.Errorf("expected rewritten robots meta tag in body for %s", hostURL)

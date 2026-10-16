@@ -627,6 +627,24 @@ func TestCrawlerParityIntegrity(t *testing.T) {
 	}
 	robotsStr := string(robotsBytes)
 
+	middlewareBytes, err := os.ReadFile("functions/_middleware.js")
+	if err != nil {
+		t.Fatalf("Failed to read functions/_middleware.js: %v", err)
+	}
+	middlewareStr := string(middlewareBytes)
+
+	serverBytes, err := os.ReadFile("tools/server/main.go")
+	if err != nil {
+		t.Fatalf("Failed to read tools/server/main.go: %v", err)
+	}
+	serverStr := string(serverBytes)
+
+	headersBytes, err := os.ReadFile("_headers")
+	if err != nil {
+		t.Fatalf("Failed to read _headers: %v", err)
+	}
+	headersStr := string(headersBytes)
+
 	// 1. Extract and compile the client-side isBot regex pattern
 	reRegex := regexp.MustCompile(`\|\|\s*/([^/]+)/i\.test`)
 	match := reRegex.FindStringSubmatch(htmlStr)
@@ -641,59 +659,69 @@ func TestCrawlerParityIntegrity(t *testing.T) {
 
 	// 2. Define the core approved generative AI & search crawlers
 	crawlersToVerify := []struct {
-		name      string
-		token     string
-		userAgent string
+		name            string
+		token           string
+		userAgent       string
+		disallowOnAlias bool
 	}{
-		// Google Ecosystem (8)
-		{"Googlebot", "Googlebot", "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)"},
-		{"Google-InspectionTool", "Google-InspectionTool", "Mozilla/5.0 (compatible; Google-InspectionTool/1.0;)"},
-		{"Google-Agent", "Google-Agent", "Mozilla/5.0 (compatible; Google-Agent/1.0; +https://developers.google.com)"},
-		{"Google-Lens", "Google-Lens", "Google-Lens"},
-		{"Gemini-Deep-Research", "Gemini-Deep-Research", "Mozilla/5.0 (compatible; Gemini-Deep-Research/1.0;)"},
-		{"GoogleOther", "GoogleOther", "Mozilla/5.0 (compatible; GoogleOther/1.0;)"},
-		{"Google-GeminiNotebook", "Google-GeminiNotebook", "Mozilla/5.0 (compatible; Google-GeminiNotebook)"},
-		{"Google-NotebookLM", "Google-NotebookLM", "Mozilla/5.0 (compatible; Google-NotebookLM)"},
+		// Google Ecosystem (9)
+		{"Googlebot", "Googlebot", "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)", false},
+		{"Google-InspectionTool", "Google-InspectionTool", "Mozilla/5.0 (compatible; Google-InspectionTool/1.0;)", false},
+		{"Google-Agent", "Google-Agent", "Mozilla/5.0 (compatible; Google-Agent/1.0; +https://developers.google.com)", true},
+		{"Google-CloudVertexBot", "Google-CloudVertexBot", "Mozilla/5.0 (compatible; Google-CloudVertexBot; +https://cloud.google.com/enterprise-search)", true},
+		{"Google-Lens", "Google-Lens", "Google-Lens", true},
+		{"Gemini-Deep-Research", "Gemini-Deep-Research", "Mozilla/5.0 (compatible; Gemini-Deep-Research/1.0;)", true},
+		{"GoogleOther", "GoogleOther", "Mozilla/5.0 (compatible; GoogleOther/1.0;)", true},
+		{"Google-GeminiNotebook", "Google-GeminiNotebook", "Mozilla/5.0 (compatible; Google-GeminiNotebook)", true},
+		{"Google-NotebookLM", "Google-NotebookLM", "Mozilla/5.0 (compatible; Google-NotebookLM)", true},
 		// OpenAI (3)
-		{"GPTBot", "GPTBot", "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; GPTBot/1.2; +https://openai.com/gptbot)"},
-		{"ChatGPT-User", "ChatGPT-User", "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; ChatGPT-User/1.0; +https://openai.com/bot)"},
-		{"OAI-SearchBot", "OAI-SearchBot", "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; OAI-SearchBot/1.0; +https://openai.com/searchbot)"},
+		{"GPTBot", "GPTBot", "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; GPTBot/1.2; +https://openai.com/gptbot)", true},
+		{"ChatGPT-User", "ChatGPT-User", "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; ChatGPT-User/1.0; +https://openai.com/bot)", true},
+		{"OAI-SearchBot", "OAI-SearchBot", "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; OAI-SearchBot/1.0; +https://openai.com/searchbot)", true},
 		// Anthropic (3)
-		{"ClaudeBot", "ClaudeBot", "Mozilla/5.0 (compatible; ClaudeBot/1.0; +claudebot@anthropic.com)"},
-		{"Claude-User", "Claude-User", "Mozilla/5.0 (compatible; Claude-User/1.0; +claudebot@anthropic.com)"},
-		{"Claude-SearchBot", "Claude-SearchBot", "Mozilla/5.0 (compatible; Claude-SearchBot/1.0; +claudebot@anthropic.com)"},
+		{"ClaudeBot", "ClaudeBot", "Mozilla/5.0 (compatible; ClaudeBot/1.0; +claudebot@anthropic.com)", true},
+		{"Claude-User", "Claude-User", "Mozilla/5.0 (compatible; Claude-User/1.0; +claudebot@anthropic.com)", true},
+		{"Claude-SearchBot", "Claude-SearchBot", "Mozilla/5.0 (compatible; Claude-SearchBot/1.0; +claudebot@anthropic.com)", true},
 		// xAI (5)
-		{"GrokBot", "GrokBot", "Mozilla/5.0 (compatible; GrokBot/1.0)"},
-		{"Grok-Web", "Grok-Web", "Mozilla/5.0 (compatible; Grok-Web/1.0)"},
-		{"xAI-Grok", "xAI-Grok", "Mozilla/5.0 (compatible; xAI-Grok/1.0)"},
-		{"xAI-Bot", "xAI-Bot", "Mozilla/5.0 (compatible; xAI-Bot/1.0; +https://x.ai)"},
-		{"xAI-SearchBot", "xAI-SearchBot", "Mozilla/5.0 (compatible; xAI-SearchBot/1.0; +https://x.ai)"},
+		{"GrokBot", "GrokBot", "Mozilla/5.0 (compatible; GrokBot/1.0)", true},
+		{"Grok-Web", "Grok-Web", "Mozilla/5.0 (compatible; Grok-Web/1.0)", true},
+		{"xAI-Grok", "xAI-Grok", "Mozilla/5.0 (compatible; xAI-Grok/1.0)", true},
+		{"xAI-Bot", "xAI-Bot", "Mozilla/5.0 (compatible; xAI-Bot/1.0; +https://x.ai)", true},
+		{"xAI-SearchBot", "xAI-SearchBot", "Mozilla/5.0 (compatible; xAI-SearchBot/1.0; +https://x.ai)", true},
 		// Perplexity (2)
-		{"PerplexityBot", "PerplexityBot", "Mozilla/5.0 (compatible; PerplexityBot/1.0; +https://perplexity.ai/perplexitybot)"},
-		{"Perplexity-User", "Perplexity-User", "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; Perplexity-User/1.0; +https://perplexity.ai/perplexity-user)"},
+		{"PerplexityBot", "PerplexityBot", "Mozilla/5.0 (compatible; PerplexityBot/1.0; +https://perplexity.ai/perplexitybot)", true},
+		{"Perplexity-User", "Perplexity-User", "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; Perplexity-User/1.0; +https://perplexity.ai/perplexity-user)", true},
 		// Mistral AI (2)
-		{"MistralAI-User", "MistralAI-User", "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; MistralAI-User/1.0; +https://docs.mistral.ai/robots)"},
-		{"MistralAI-Index", "MistralAI-Index", "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; MistralAI-Index/1.0; +https://docs.mistral.ai/robots)"},
+		{"MistralAI-User", "MistralAI-User", "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; MistralAI-User/1.0; +https://docs.mistral.ai/robots)", true},
+		{"MistralAI-Index", "MistralAI-Index", "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; MistralAI-Index/1.0; +https://docs.mistral.ai/robots)", true},
 		// Core Search Engines (3)
-		{"Bravebot", "Bravebot", "Mozilla/5.0 (compatible; Bravebot/1.0; +https://brave.com/search/crawler/)"},
-		{"Bingbot", "Bingbot", "Mozilla/5.0 (compatible; bingbot/2.0; +http://www.bing.com/bingbot.htm)"},
-		{"Applebot", "Applebot", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Safari/605.1.15 (Applebot/0.1; +http://www.apple.com/go/applebot)"},
-		// Frontier & Foundation AI Crawlers (9)
-		{"meta-externalagent", "meta-externalagent", "Mozilla/5.0 (compatible; meta-externalagent/1.1; +https://developers.facebook.com/docs/sharing/webmasters/crawler)"},
-		{"meta-externalfetcher", "meta-externalfetcher", "meta-externalfetcher/1.1 (+https://developers.facebook.com/docs/sharing/webmasters/web-crawlers)"},
-		{"Bytespider", "Bytespider", "Mozilla/5.0 (compatible; Bytespider; https://zhanzhang.toutiao.com/)"},
-		{"cohere-ai", "cohere-ai", "Mozilla/5.0 (compatible; cohere-ai/1.0; +https://cohere.com/bot)"},
-		{"DeepSeekBot", "DeepSeekBot", "Mozilla/5.0 (compatible; DeepSeekBot/1.0; +https://www.deepseek.com)"},
-		{"Amazonbot", "Amazonbot", "Mozilla/5.0 (compatible; Amazonbot/0.1; +https://developer.amazon.com/support/amazonbot)"},
-		{"YouBot", "YouBot", "Mozilla/5.0 (compatible; YouBot/1.0; +https://you.com/crawler)"},
-		{"AI2Bot", "AI2Bot", "Mozilla/5.0 (compatible; AI2Bot/1.0; +https://allenai.org/crawler)"},
-		{"CCBot", "CCBot", "CCBot/2.0 (https://commoncrawl.org/faq/)"},
+		{"Bravebot", "Bravebot", "Mozilla/5.0 (compatible; Bravebot/1.0; +https://brave.com/search/crawler/)", false},
+		{"Bingbot", "Bingbot", "Mozilla/5.0 (compatible; bingbot/2.0; +http://www.bing.com/bingbot.htm)", false},
+		{"Applebot", "Applebot", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Safari/605.1.15 (Applebot/0.1; +http://www.apple.com/go/applebot)", false},
+		// Frontier & Foundation AI Crawlers (11)
+		{"Applebot-Extended", "Applebot-Extended", "Mozilla/5.0 (Applebot-Extended/0.1; +http://www.apple.com/go/applebot)", true},
+		{"DuckAssistBot", "DuckAssistBot", "Mozilla/5.0 (compatible; DuckAssistBot/1.0; +http://duckduckgo.com/duckassistbot.html)", true},
+		{"meta-externalagent", "meta-externalagent", "Mozilla/5.0 (compatible; meta-externalagent/1.1; +https://developers.facebook.com/docs/sharing/webmasters/crawler)", true},
+		{"meta-externalfetcher", "meta-externalfetcher", "meta-externalfetcher/1.1 (+https://developers.facebook.com/docs/sharing/webmasters/web-crawlers)", true},
+		{"Bytespider", "Bytespider", "Mozilla/5.0 (compatible; Bytespider; https://zhanzhang.toutiao.com/)", true},
+		{"cohere-ai", "cohere-ai", "Mozilla/5.0 (compatible; cohere-ai/1.0; +https://cohere.com/bot)", true},
+		{"DeepSeekBot", "DeepSeekBot", "Mozilla/5.0 (compatible; DeepSeekBot/1.0; +https://www.deepseek.com)", true},
+		{"Amazonbot", "Amazonbot", "Mozilla/5.0 (compatible; Amazonbot/0.1; +https://developer.amazon.com/support/amazonbot)", true},
+		{"YouBot", "YouBot", "Mozilla/5.0 (compatible; YouBot/1.0; +https://you.com/crawler)", true},
+		{"AI2Bot", "AI2Bot", "Mozilla/5.0 (compatible; AI2Bot/1.0; +https://allenai.org/crawler)", true},
+		{"CCBot", "CCBot", "CCBot/2.0 (https://commoncrawl.org/faq/)", true},
 	}
 
-	// Extract Section 1 (VIP) of robots.txt
+	// Extract Section 1 (VIP + AI Agents) of robots.txt
 	vipSection := robotsStr
 	if idx := strings.Index(robotsStr, "# --- 2. THE WALL"); idx != -1 {
 		vipSection = robotsStr[:idx]
+	}
+
+	// Extract AI Disallow section from ALIAS_ROBOTS_TXT
+	aliasAIDisallow := middlewareStr
+	if idx := strings.Index(middlewareStr, "# Allow Search Indexers"); idx != -1 {
+		aliasAIDisallow = middlewareStr[:idx]
 	}
 
 	for _, crawler := range crawlersToVerify {
@@ -707,6 +735,41 @@ func TestCrawlerParityIntegrity(t *testing.T) {
 		if !botRegex.MatchString(crawler.userAgent) {
 			t.Errorf("index.html isBot regex failed to detect User-Agent for %s: %q", crawler.name, crawler.userAgent)
 		}
+
+		// Verify AI crawlers are explicitly disallowed on alias/preview domains
+		if crawler.disallowOnAlias && !strings.Contains(aliasAIDisallow, expectedDirective) {
+			t.Errorf("ALIAS_ROBOTS_TXT AI disallow block missing %q", expectedDirective)
+		}
+	}
+
+	// 3. Verify Google-Extended policy token is present in robots.txt VIP section and ALIAS_ROBOTS_TXT
+	if !strings.Contains(vipSection, "User-agent: Google-Extended") {
+		t.Errorf("robots.txt VIP section missing policy token \"User-agent: Google-Extended\"")
+	}
+	if !strings.Contains(aliasAIDisallow, "User-agent: Google-Extended") {
+		t.Errorf("ALIAS_ROBOTS_TXT AI disallow block missing policy token \"User-agent: Google-Extended\"")
+	}
+
+	// 4. Verify Section 1.1 of robots.txt isolates /api/ while granting prefix-safe Allow: /
+	sec11Idx := strings.Index(vipSection, "# --- 1.1 ")
+	if sec11Idx == -1 {
+		t.Fatalf("robots.txt missing Section 1.1 header")
+	}
+	sec11 := vipSection[sec11Idx:]
+	if !strings.Contains(sec11, "Allow: /") || !strings.Contains(sec11, "Disallow: /api/") {
+		t.Errorf("robots.txt Section 1.1 must contain both 'Allow: /' and 'Disallow: /api/'")
+	}
+
+	// 5. Verify RFC 8288 Link header for LLM discovery and _headers manifest rules
+	expectedLinkHeader := `</llms.txt>; rel="alternate"; type="text/plain"; title="LLM Context", </llms-full.txt>; rel="alternate"; type="text/plain"; title="LLM Full Context"`
+	if !strings.Contains(middlewareStr, expectedLinkHeader) {
+		t.Errorf("functions/_middleware.js missing expected LLM Link header %q", expectedLinkHeader)
+	}
+	if !strings.Contains(serverStr, expectedLinkHeader) {
+		t.Errorf("tools/server/main.go missing expected LLM Link header %q", expectedLinkHeader)
+	}
+	if !strings.Contains(headersStr, "/llms.txt") || !strings.Contains(headersStr, "/llms-full.txt") {
+		t.Errorf("_headers missing explicit cache/content-type rules for /llms.txt and /llms-full.txt")
 	}
 }
 
