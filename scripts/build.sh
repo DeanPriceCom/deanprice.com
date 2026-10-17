@@ -19,9 +19,11 @@ if ! command -v tinygo >/dev/null 2>&1; then
         TINYGO_CMD="tinygo.exe"
     else
         TINYGO_VERSION="0.41.1"
+        TINYGO_SHA256="e156d1d93a376eef639a4143d13be07e8c463fb6cf2d7d447698ed4474d23e91"
         if [ ! -d "${TOOLS_DIR}/tinygo/bin" ]; then
             echo "==> TinyGo not found in PATH. Downloading TinyGo v${TINYGO_VERSION}..."
             curl -fsSL "https://github.com/tinygo-org/tinygo/releases/download/v${TINYGO_VERSION}/tinygo${TINYGO_VERSION}.linux-amd64.tar.gz" -o "${TOOLS_DIR}/tinygo.tar.gz"
+            echo "${TINYGO_SHA256}  ${TOOLS_DIR}/tinygo.tar.gz" | sha256sum -c -
             tar -xzf "${TOOLS_DIR}/tinygo.tar.gz" -C "${TOOLS_DIR}"
             rm -f "${TOOLS_DIR}/tinygo.tar.gz"
         fi
@@ -39,10 +41,12 @@ if ! command -v wasm-opt >/dev/null 2>&1; then
         WASM_OPT_CMD="wasm-opt.exe"
     else
         BINARYEN_VERSION="version_126"
+        BINARYEN_SHA256="e487e0eac1f02a6739816c617270b033e5d3f8ca90439301fd0286460322fd76"
         BINARYEN_DIR="binaryen-${BINARYEN_VERSION}"
         if [ ! -d "${TOOLS_DIR}/${BINARYEN_DIR}/bin" ]; then
             echo "==> wasm-opt not found in PATH. Downloading Binaryen ${BINARYEN_VERSION}..."
             curl -fsSL "https://github.com/WebAssembly/binaryen/releases/download/${BINARYEN_VERSION}/binaryen-${BINARYEN_VERSION}-x86_64-linux.tar.gz" -o "${TOOLS_DIR}/binaryen.tar.gz"
+            echo "${BINARYEN_SHA256}  ${TOOLS_DIR}/binaryen.tar.gz" | sha256sum -c -
             tar -xzf "${TOOLS_DIR}/binaryen.tar.gz" -C "${TOOLS_DIR}"
             rm -f "${TOOLS_DIR}/binaryen.tar.gz"
         fi
@@ -64,14 +68,18 @@ echo "==> Compiling WebAssembly binary with TinyGo..."
 echo "==> Optimizing with wasm-opt -Oz..."
 "${WASM_OPT_CMD}" -Oz --strip-debug --strip-dwarf --strip-producers -o main.wasm main.wasm
 
-# 6. Ensure wasm_exec.js exists in workspace root
+# 6. Synchronize README.md WASM size metrics
+echo "==> Synchronizing README.md WASM size metrics..."
+"${GO_CMD}" run ./tools -task=readme
+
+# 7. Ensure wasm_exec.js exists in workspace root
 if [ ! -f wasm_exec.js ]; then
     TINYGOROOT="$(${TINYGO_CMD} env TINYGOROOT)"
     echo "==> Copying wasm_exec.js from ${TINYGOROOT}..."
     cp "${TINYGOROOT}/targets/wasm_exec.js" .
 fi
 
-# 7. Assemble isolated dist/ deployment bundle
+# 8. Assemble isolated dist/ deployment bundle
 echo "==> Assembling isolated dist/ bundle..."
 "${GO_CMD}" run ./tools -task=dist
 

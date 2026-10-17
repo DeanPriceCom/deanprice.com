@@ -22,7 +22,7 @@ func TestExtractCountry(t *testing.T) {
 		{"country param lowercase ie", "http://localhost:8080/?country=ie", "IE"},
 		{"country param T1", "http://localhost:8080/?country=T1", "T1"},
 		{"country param lowercase t1", "http://localhost:8080/?country=t1", "T1"},
-		{"valid 2-digit number code 12", "http://localhost:8080/?country=12", "12"},
+		{"invalid 2-digit number code 12 fallback", "http://localhost:8080/?country=12", ""},
 		{"invalid country code fallback", "http://localhost:8080/?country=TURKEY", ""},
 		{"invalid length fallback", "http://localhost:8080/?country=1", ""},
 		{"host deanprice.tr", "http://deanprice.tr/", "TR"},
@@ -219,13 +219,13 @@ func TestHandleRootHTML_AliasHosts(t *testing.T) {
 func TestNewDevHandler_RobotsTxt(t *testing.T) {
 	handler := newDevHandler()
 
-	// 1. Alias hosts (including .pages.dev) receive dynamic alias robots.txt with noindex header
+	// 1. Alias hosts (including deanprice-com.pages.dev) receive dynamic alias robots.txt with noindex header
 	aliasReqs := []string{
 		"http://deanprice.uk/robots.txt",
 		"http://deanprice.ie/robots.txt",
 		"http://deanprice.tr/robots.txt",
 		"http://deanprice-com.pages.dev/robots.txt",
-		"http://preview.pages.dev/robots.txt",
+		"http://preview.deanprice-com.pages.dev/robots.txt",
 	}
 	for _, rawURL := range aliasReqs {
 		aliasReq := httptest.NewRequest("GET", rawURL, nil)

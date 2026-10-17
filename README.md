@@ -18,7 +18,7 @@ A deliberately over-engineered personal identity card and systems sandbox. Engin
 > It doesn't. This project is an intentional exercise in extreme constraint optimisation—treating a simple contact card as a sandbox to explore how far the modern web platform, TinyGo compiler, and CDN edge can be pushed.
 
 ### Threat Model & Boundaries
-* **In Scope (Primary Goal):** Economic and computational asymmetry against automated scrapers. Neutralises 99% of static harvesters (`curl`, Scrapy, BeautifulSoup, regex extractors) at 0ms latency cost, with zero intrusive CAPTCHAs or UI friction for human visitors.
+* **In Scope (Primary Goal):** Economic and computational asymmetry against automated scrapers. Neutralises traditional static HTML harvesters (`curl`, Scrapy, BeautifulSoup, regex extractors) that do not execute WebAssembly, at 0ms latency cost and with zero intrusive CAPTCHAs or UI friction for human visitors.
 * **Explicit Non-Goal:** Cryptographic defence against full-DOM headless browsers (Playwright/Puppeteer). In client-side web architecture, any resource rendered in a user's browser is fundamentally inspectable by an emulated browser engine. The defence targets bulk automated harvesting, not targeted manual reverse-engineering.
 
 ---
@@ -26,13 +26,13 @@ A deliberately over-engineered personal identity card and systems sandbox. Engin
 ## 🏛️ Architectural Highlights
 
 ### 1. Micro-WebAssembly Runtime (TinyGo)
-* Compiled with **TinyGo** (`-opt=z -no-debug -panic=trap`) and post-optimised with Binaryen's `wasm-opt -Oz` into a <!-- wasm-size -->**43.9 KB micro-WASM binary** (18.7 KB gzipped)<!-- /wasm-size -->, compared to ~2.5 MB standard Go.
+* Compiled with **TinyGo** (`-opt=z -no-debug -panic=trap`) and post-optimised with Binaryen's `wasm-opt -Oz` into a <!-- wasm-size -->**41.7 KB micro-WASM binary** (17.5 KB gzipped)<!-- /wasm-size -->, compared to ~2.5 MB standard Go.
 * Stripped of the standard Go runtime scheduler, timer queues, reflection, and panic unwinding, executing in **<2 ms** directly inside the browser's native WebAssembly engine.
 
 ### 2. Domain-Bound Obfuscation & Scraper Resistance
 * **Algorithm:** 64-bit Donald Knuth Linear Congruential Generator (LCG) coupled with Sebastiano Vigna & Guy Steele's **SplitMix64** non-linear bit diffusion.
 * **Domain-Bound & Target-Verified:** Keystreams are mathematically locked to `location.hostname`, field nonces, and a runtime initialisation context—providing friction-based static scraper and regex mitigation without intrusive CAPTCHAs or interaction delays.
-* **Deterministic Build-Time Secret Injection:** Production secrets and master seeds are injected exclusively at compile time via Cloudflare Pages environment variables, guarded by CI assertions to ensure **zero plaintexts or private keys exist in the repository**.
+* **Deterministic Build-Time Seed Injection:** Production contact values and master seeds are injected exclusively at compile time via Cloudflare Pages environment variables, guarded by CI assertions to ensure **zero plaintexts or master seeds exist in the repository**.
 
 ### 3. Edge-Driven Regional Localisation
 * Cloudflare Pages Middleware (`functions/_middleware.js`) dynamically injects a `<meta name="cf-country">` tag at the CDN edge using streaming `HTMLRewriter`.
@@ -47,7 +47,7 @@ A deliberately over-engineered personal identity card and systems sandbox. Engin
 
 ### 5. Progressive Web App (PWA) & Security Headers
 * Strict **Content Security Policy (CSP Level 3)** with build-time SHA-256 script hashing and **Trusted Types** policy enforcement (`trusted-types swPolicy 'allow-duplicates'`).
-* Resilient Service Worker using **Network-First navigation with offline cache fallback**, eliminating stale geo-routing and version skew while guaranteeing offline availability.
+* Resilient Service Worker using **Network-First navigation with background cache revalidation and offline fallback**, preventing stale online geo-routing and version skew while providing offline availability.
 * Service Worker cache invalidation keyed directly to Cloudflare deployment commit SHAs (`CF_PAGES_COMMIT_SHA`).
 
 ---

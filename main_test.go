@@ -8,6 +8,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"os/exec"
+	"path/filepath"
 	"regexp"
 	"strings"
 	"testing"
@@ -217,6 +219,16 @@ func TestServiceWorkerCacheIntegrity(t *testing.T) {
 	}
 	swStr := string(swBytes)
 
+	if !strings.Contains(swStr, "!url.search") {
+		t.Errorf("sw.js must guard canonical '/' cache overwrite with !url.search to prevent query-param cache pollution")
+	}
+
+	distBytes, err := os.ReadFile("tools/dist.go")
+	if err != nil {
+		t.Fatalf("Failed to read tools/dist.go: %v", err)
+	}
+	distStr := string(distBytes)
+
 	// Extract ASSETS_TO_CACHE array
 	re := regexp.MustCompile(`ASSETS_TO_CACHE\s*=\s*\[([\s\S]*?)\]`)
 	match := re.FindStringSubmatch(swStr)
@@ -249,7 +261,15 @@ func TestServiceWorkerCacheIntegrity(t *testing.T) {
 			localPath = strings.TrimPrefix(urlPath, "/")
 		}
 
-		// 3. Check file existence (CI-aware: main.wasm and wasm_exec.js are build artifacts provisioned by TinyGo/build.sh)
+		// 3. Verify asset is covered by tools/dist.go bundle rules (exact filename or glob pattern)
+		exactMatch := strings.Contains(distStr, fmt.Sprintf("%q", localPath))
+		ext := filepath.Ext(localPath)
+		globMatch := ext != "" && strings.Contains(distStr, fmt.Sprintf(`"*%s"`, ext))
+		if !exactMatch && !globMatch {
+			t.Errorf("Asset %q in sw.js ASSETS_TO_CACHE is not covered by tools/dist.go deployment allowlist", localPath)
+		}
+
+		// 4. Check file existence (CI-aware: main.wasm and wasm_exec.js are build artifacts provisioned by TinyGo/build.sh)
 		if localPath == "main.wasm" || localPath == "wasm_exec.js" {
 			if _, err := os.Stat(localPath); os.IsNotExist(err) {
 				t.Logf("Note: %s is not yet compiled/provisioned (expected during pre-build CI testing)", localPath)
@@ -312,10 +332,11 @@ func TestServiceWorkerRegistrationGatingAndTelemetry(t *testing.T) {
 }
 
 func TestDevHostSyncIntegrity(t *testing.T) {
-	// Verify that preview domain rules are in sync across:
+	// Verify that preview domain rules and country validation are in sync across:
 	// 1. internal/contact/decrypt.go
 	// 2. functions/_middleware.js
 	// 3. index.html
+	// 4. tools/server/main.go
 
 	middlewareBytes, err := os.ReadFile("functions/_middleware.js")
 	if err != nil {
@@ -329,26 +350,38 @@ func TestDevHostSyncIntegrity(t *testing.T) {
 	}
 	htmlStr := string(htmlBytes)
 
+	serverBytes, err := os.ReadFile("tools/server/main.go")
+	if err != nil {
+		t.Fatalf("Failed to read tools/server/main.go: %v", err)
+	}
+	serverStr := string(serverBytes)
+
 	requiredHostPatterns := []string{
 		"localhost",
 		"127.0.0.1",
 		"::1",
 		"[::1]",
-		".pages.dev",
+		"deanprice-com.pages.dev",
+		".deanprice-com.pages.dev",
 		".local",
 		".lan",
 		".ts.net",
 		"PRIVATE_IPV4_REGEX",
 		`^(?:10(?:\.\d{1,3}){3}|192\.168(?:\.\d{1,3}){2}|172\.(?:1[6-9]|2\d|3[01])(?:\.\d{1,3}){2}|100\.(?:6[4-9]|[7-9]\d|1[01]\d|12[0-7])(?:\.\d{1,3}){2})$`,
+		`^(?:[A-Za-z]{2}|[Tt]1)$`,
 	}
 
 	for _, pattern := range requiredHostPatterns {
 		if !strings.Contains(middlewareStr, pattern) {
-			t.Errorf("functions/_middleware.js missing required dev/preview pattern: %s", pattern)
+			t.Errorf("functions/_middleware.js missing required dev/preview or country pattern: %s", pattern)
 		}
 		if !strings.Contains(htmlStr, pattern) {
-			t.Errorf("index.html missing required dev/preview pattern: %s", pattern)
+			t.Errorf("index.html missing required dev/preview or country pattern: %s", pattern)
 		}
+	}
+
+	if !strings.Contains(serverStr, `^(?:[A-Za-z]{2}|[Tt]1)$`) {
+		t.Errorf("tools/server/main.go missing required country regex pattern: ^(?:[A-Za-z]{2}|[Tt]1)$")
 	}
 
 	// Verify Go helper agrees with required patterns
@@ -361,7 +394,8 @@ func TestDevHostSyncIntegrity(t *testing.T) {
 		{"::1", true},
 		{"[::1]", true},
 		{"", true},
-		{"preview.pages.dev", true},
+		{"deanprice-com.pages.dev", true},
+		{"preview.deanprice-com.pages.dev", true},
 		{"myphone.local", true},
 		{"laptop.lan", true},
 		{"node.ts.net", true},
@@ -384,6 +418,8 @@ func TestDevHostSyncIntegrity(t *testing.T) {
 		// Public domains & spoof attempts
 		{"deanprice.com", false},
 		{"evil-scraper.com", false},
+		{"evil.pages.dev", false},
+		{"fake-deanprice-com.pages.dev", false},
 		{"example.com", false},
 		{"10.com", false},
 		{"100.com", false},
@@ -816,5 +852,186 @@ func TestHoneypotDisambiguationIntegrity(t *testing.T) {
 	}
 	if !strings.Contains(ldPayload, `"disambiguatingDescription"`) || !strings.Contains(ldPayload, "mailboxdp-hello@yahoo.com") || !strings.Contains(ldPayload, "+447377056455") {
 		t.Errorf("JSON-LD block in index.html must include disambiguatingDescription naming honeypot decoys")
+	}
+}
+
+func TestReportEndpointBehavior(t *testing.T) {
+	nodeBin, err := exec.LookPath("node")
+	if err != nil {
+		t.Skip("node not found in PATH, skipping JS syntax and behavioral tests")
+	}
+
+	// 1. Verify zero JS syntax errors across Service Worker and Edge Functions
+	jsFiles := []string{"sw.js", "functions/_middleware.js", "functions/api/report.js"}
+	for _, jsFile := range jsFiles {
+		cmd := exec.Command(nodeBin, "--check", jsFile)
+		if out, err := cmd.CombinedOutput(); err != nil {
+			t.Fatalf("node --check %s failed: %v\n%s", jsFile, err, string(out))
+		}
+	}
+
+	// 2. Execute behavioral test suite against functions/api/report.js
+	script := `
+import assert from "node:assert/strict";
+import { onRequestPost, onRequestOptions, _resetStateForTesting } from "./functions/api/report.js";
+
+// Silence expected console.error/warn telemetry output during tests
+console.error = () => {};
+console.warn = () => {};
+
+let webhookCalls = [];
+globalThis.fetch = async (url, init) => {
+  webhookCalls.push({ url, init });
+  return new Response(null, { status: 204 });
+};
+
+function makeContext(request, env = { DISCORD_WEBHOOK_URL: "https://discord.example/webhook" }) {
+  const pending = [];
+  return {
+    request,
+    env,
+    waitUntil(p) { pending.push(p); },
+    async flush() { await Promise.all(pending); }
+  };
+}
+
+// Test 1: Oversized streaming body WITHOUT Content-Length returns 413
+{
+  _resetStateForTesting();
+  webhookCalls = [];
+  const chunk = new Uint8Array(4096).fill(65); // 4 KB chunk
+  let sent = 0;
+  const stream = new ReadableStream({
+    pull(controller) {
+      if (sent < 4) { // 16 KB total > 10 KB limit
+        sent++;
+        controller.enqueue(chunk);
+      } else {
+        controller.close();
+      }
+    }
+  });
+  const req = new Request("https://www.deanprice.com/api/report", {
+    method: "POST",
+    body: stream,
+    duplex: "half"
+  });
+  const ctx = makeContext(req);
+  const res = await onRequestPost(ctx);
+  assert.equal(res.status, 413, "Expected 413 for >10KB stream without Content-Length");
+  assert.ok(sent <= 3, "Expected stream reader to abort early as soon as 10KB was exceeded");
+}
+
+// Test 2: Non-string JSON schema fields do not throw TypeError (returns 204)
+{
+  _resetStateForTesting();
+  webhookCalls = [];
+  const payloads = [
+    { type: "unhandled_rejection", message: 12345 },
+    { type: "uncaught_error", message: { nested: "obj" }, stack: [1, 2, 3], filename: 999 },
+    { "csp-report": { "blocked-uri": 123, "violated-directive": true, "source-file": "https://www.deanprice.com/index.html" } }
+  ];
+  for (const p of payloads) {
+    const req = new Request("https://www.deanprice.com/api/report", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(p)
+    });
+    const ctx = makeContext(req);
+    const res = await onRequestPost(ctx);
+    await ctx.flush();
+    assert.equal(res.status, 204, "Expected 204 for non-string JSON field payload");
+  }
+  assert.equal(webhookCalls.length, 3, "Expected coerced non-string reports to dispatch cleanly");
+}
+
+// Test 3: W3C Reporting API batch array is capped at MAX_BATCH_REPORTS (5)
+{
+  _resetStateForTesting();
+  webhookCalls = [];
+  const batch = Array.from({ length: 20 }, (_, i) => ({
+    type: "csp-violation",
+    body: {
+      documentURL: "https://www.deanprice.com/",
+      effectiveDirective: "script-src",
+      blockedURL: "https://evil.example/script-" + i + ".js",
+      sourceFile: "https://www.deanprice.com/index.html"
+    }
+  }));
+  const req = new Request("https://www.deanprice.com/api/report", {
+    method: "POST",
+    headers: { "Content-Type": "application/reports+json" },
+    body: JSON.stringify(batch)
+  });
+  const ctx = makeContext(req);
+  const res = await onRequestPost(ctx);
+  await ctx.flush();
+  assert.equal(res.status, 204);
+  assert.equal(webhookCalls.length, 5, "Expected batch array to be capped at 5 webhook notifications");
+}
+
+// Test 4: Per-isolate global webhook rate limit caps unique error floods at 5 per window
+{
+  _resetStateForTesting();
+  webhookCalls = [];
+  for (let i = 0; i < 8; i++) {
+    const req = new Request("https://www.deanprice.com/api/report", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ type: "runtime_err", message: "Unique failure " + i })
+    });
+    const ctx = makeContext(req);
+    const res = await onRequestPost(ctx);
+    await ctx.flush();
+    assert.equal(res.status, 204);
+  }
+  assert.equal(webhookCalls.length, 5, "Expected per-isolate rate limiter to cap unique webhooks at 5");
+}
+
+// Test 5: Duplicate suppression drops identical reports within cooldown window
+{
+  _resetStateForTesting();
+  webhookCalls = [];
+  for (let i = 0; i < 3; i++) {
+    const req = new Request("https://www.deanprice.com/api/report", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ type: "wasm_trap", message: "Identical trap" })
+    });
+    const ctx = makeContext(req);
+    await onRequestPost(ctx);
+    await ctx.flush();
+  }
+  assert.equal(webhookCalls.length, 1, "Expected duplicate reports to only trigger 1 webhook");
+}
+
+// Test 6: CORS Origin restriction allows first-party & deanprice-com.pages.dev, blocks arbitrary third parties
+{
+  const allowedReq = new Request("https://www.deanprice.com/api/report", {
+    method: "OPTIONS",
+    headers: { "Origin": "https://preview.deanprice-com.pages.dev" }
+  });
+  const allowedRes = await onRequestOptions({ request: allowedReq });
+  assert.equal(allowedRes.headers.get("Access-Control-Allow-Origin"), "https://preview.deanprice-com.pages.dev");
+
+  const blockedPagesReq = new Request("https://www.deanprice.com/api/report", {
+    method: "OPTIONS",
+    headers: { "Origin": "https://other-tenant.pages.dev" }
+  });
+  const blockedPagesRes = await onRequestOptions({ request: blockedPagesReq });
+  assert.equal(blockedPagesRes.headers.get("Access-Control-Allow-Origin"), "https://www.deanprice.com");
+
+  const blockedEvilReq = new Request("https://www.deanprice.com/api/report", {
+    method: "OPTIONS",
+    headers: { "Origin": "https://evil-scraper.com" }
+  });
+  const blockedEvilRes = await onRequestOptions({ request: blockedEvilReq });
+  assert.equal(blockedEvilRes.headers.get("Access-Control-Allow-Origin"), "https://www.deanprice.com");
+}
+`
+
+	cmd := exec.Command(nodeBin, "--input-type=module", "-e", script)
+	if out, err := cmd.CombinedOutput(); err != nil {
+		t.Fatalf("Behavioral test suite for functions/api/report.js failed: %v\n%s", err, string(out))
 	}
 }

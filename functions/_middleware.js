@@ -94,7 +94,8 @@ export async function onRequest(context) {
   const isAliasDomain = cleanHost === "deanprice.uk" ||
                         cleanHost === "deanprice.tr" ||
                         cleanHost === "deanprice.ie" ||
-                        cleanHost.endsWith(".pages.dev");
+                        cleanHost === "deanprice-com.pages.dev" ||
+                        cleanHost.endsWith(".deanprice-com.pages.dev");
 
   // Dynamic /robots.txt handling for alias domains vs primary .com
   if (url.pathname === "/robots.txt") {
@@ -123,7 +124,8 @@ export async function onRequest(context) {
                          hostname === "::1" ||
                          hostname === "[::1]" ||
                          hostname === "" ||
-                         hostname.endsWith(".pages.dev") ||
+                         hostname === "deanprice-com.pages.dev" ||
+                         hostname.endsWith(".deanprice-com.pages.dev") ||
                          hostname.endsWith(".local") ||
                          hostname.endsWith(".lan") ||
                          hostname.endsWith(".ts.net") ||
@@ -143,7 +145,7 @@ export async function onRequest(context) {
     rawCountry = queryCountry || context.request.cf?.country || context.request.headers.get("CF-IPCountry") || "";
   }
 
-  const country = /^[A-Za-z0-9]{2}$/.test(rawCountry) ? rawCountry.toUpperCase() : "";
+  const country = /^(?:[A-Za-z]{2}|[Tt]1)$/.test(rawCountry) ? rawCountry.toUpperCase() : "";
 
   let rewriter = new HTMLRewriter()
     .on("head", new CountryInjector(country));

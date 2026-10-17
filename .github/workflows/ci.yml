@@ -47,8 +47,16 @@ jobs:
         with:
           tinygo-version: '0.41.1'
 
-      - name: Verify TinyGo WebAssembly compilation (Cloudflare Pages parity)
-        run: tinygo build -opt=z -no-debug -panic=trap -target wasm -o /dev/null .
+      - name: Verify TinyGo WebAssembly compilation & sub-50 KB budget (Cloudflare Pages parity)
+        run: |
+          tinygo build -opt=z -no-debug -panic=trap -target wasm -o main.wasm .
+          WASM_BYTES=$(wc -c < main.wasm)
+          echo "Compiled main.wasm size: ${WASM_BYTES} bytes"
+          if [ "$WASM_BYTES" -le 0 ] || [ "$WASM_BYTES" -gt 51200 ]; then
+            echo "::error::main.wasm size (${WASM_BYTES} bytes) exceeds 50 KB (51200 bytes) micro-WASM budget!"
+            exit 1
+          fi
+          rm -f main.wasm
 
       - name: Validate build script syntax
         run: bash -n scripts/build.sh

@@ -44,7 +44,8 @@ func TestEmailDecryptionAllHosts(t *testing.T) {
 		"iphone.local",
 		"laptop.lan",
 		"phone.ts.net",
-		"preview.pages.dev",
+		"deanprice-com.pages.dev",
+		"preview.deanprice-com.pages.dev",
 	}
 	expected := "mailto:" + testEmail
 
@@ -101,7 +102,7 @@ func TestWhatsAppDecryptionAllRegions(t *testing.T) {
 }
 
 func TestDomainLockProtection(t *testing.T) {
-	unauthorizedHosts := []string{"evil-scraper.com", "unauthorized-mirror.com", "deanprice.org", "phishing-deanprice.com"}
+	unauthorizedHosts := []string{"evil-scraper.com", "unauthorized-mirror.com", "deanprice.org", "phishing-deanprice.com", "evil.pages.dev", "fake-deanprice-com.pages.dev"}
 	for _, host := range unauthorizedHosts {
 		got := decrypt(emailBytes, host, "email")
 		if got == "mailto:"+testEmail {
@@ -129,7 +130,7 @@ func TestResolveCountryWithHost(t *testing.T) {
 	if got := ResolveCountryWithHost("IE", "localhost"); got != "IE" {
 		t.Errorf("Expected IE for localhost with loc=IE, got %q", got)
 	}
-	if got := ResolveCountryWithHost("GB", "preview.pages.dev"); got != "GB" {
+	if got := ResolveCountryWithHost("GB", "preview.deanprice-com.pages.dev"); got != "GB" {
 		t.Errorf("Expected GB for preview with loc=GB, got %q", got)
 	}
 	if got := ResolveCountryWithHost("", "deanprice.com"); got != "GB" {
@@ -177,7 +178,7 @@ func TestEdgeCasesAndFallbacks(t *testing.T) {
 	}
 
 	// 3. Uppercase & mixed-case dev host normalization
-	devHosts := []string{"LOCALHOST", "LocalHost", "127.0.0.1", "PREVIEW.PAGES.DEV", "MYPHONE.LOCAL", "WWW.DEANPRICE.COM"}
+	devHosts := []string{"LOCALHOST", "LocalHost", "127.0.0.1", "DEANPRICE-COM.PAGES.DEV", "PREVIEW.DEANPRICE-COM.PAGES.DEV", "MYPHONE.LOCAL", "WWW.DEANPRICE.COM"}
 	expected := "mailto:" + testEmail
 	for _, host := range devHosts {
 		got := decrypt(emailBytes, host, "email")
@@ -213,12 +214,14 @@ func TestResolveCountry(t *testing.T) {
 		{"gg", "GB"},
 		{"  gb  ", "GB"},
 
-		// Undetected / Unknown location -> GB fallback
+		// Undetected / Unknown / Malformed location -> GB fallback
 		{"", "GB"},
 		{"   ", "GB"},
 		{"XX", "GB"},
 		{"xx", "GB"},
 		{"  xx  ", "GB"},
+		{"OTHER", "GB"},
+		{"12", "GB"},
 
 		// Tor exit node -> GB fallback
 		{"T1", "GB"},
@@ -235,8 +238,6 @@ func TestResolveCountry(t *testing.T) {
 		{"AU", "IE"},
 		{"CA", "IE"},
 		{"  us  ", "IE"},
-		{"OTHER", "IE"},
-		{"12", "IE"},
 	}
 
 	for _, tt := range tests {
@@ -330,7 +331,7 @@ func TestResolveContact(t *testing.T) {
 	}
 
 	// 3. Dev and Preview host normalization
-	devHosts := []string{"localhost", "127.0.0.1", "::1", "[::1]", "", "iphone.local", "laptop.lan", "preview.pages.dev", "phone.ts.net"}
+	devHosts := []string{"localhost", "127.0.0.1", "::1", "[::1]", "", "iphone.local", "laptop.lan", "deanprice-com.pages.dev", "preview.deanprice-com.pages.dev", "phone.ts.net"}
 	for _, host := range devHosts {
 		t.Run("dev_host_"+host, func(t *testing.T) {
 			got := ResolveContact("email", "", host)

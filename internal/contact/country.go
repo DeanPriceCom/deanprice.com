@@ -39,7 +39,10 @@ func ResolveCountryWithHost(loc string, hostname string) string {
 		return "GB"
 
 	default:
-		// All verified international countries
-		return "IE"
+		if len(cleanLoc) == 2 && cleanLoc[0] >= 'A' && cleanLoc[0] <= 'Z' && cleanLoc[1] >= 'A' && cleanLoc[1] <= 'Z' {
+			// All verified international ISO alpha-2 countries
+			return "IE"
+		}
+		return "GB"
 	}
 }

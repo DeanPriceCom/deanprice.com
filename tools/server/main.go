@@ -15,7 +15,7 @@ import (
 	"strings"
 )
 
-var countryRegex = regexp.MustCompile(`^[A-Za-z0-9]{2}$`)
+var countryRegex = regexp.MustCompile(`^(?:[A-Za-z]{2}|[Tt]1)$`)
 var distFlag = flag.Bool("dist", false, "Serve from dist/ instead of workspace root")
 
 func init() {
@@ -108,7 +108,7 @@ func isAliasHost(host string) bool {
 	return host == "deanprice.uk" || strings.HasSuffix(host, ".deanprice.uk") ||
 		host == "deanprice.tr" || strings.HasSuffix(host, ".deanprice.tr") ||
 		host == "deanprice.ie" || strings.HasSuffix(host, ".deanprice.ie") ||
-		strings.HasSuffix(host, ".pages.dev")
+		host == "deanprice-com.pages.dev" || strings.HasSuffix(host, ".deanprice-com.pages.dev")
 }
 
 func extractCountry(r *http.Request) string {

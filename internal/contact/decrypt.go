@@ -54,8 +54,10 @@ func isPrivateIPv4(h string) bool {
 
 // IsDevOrPreviewHost checks if the hostname matches allowed dev or preview environments.
 func IsDevOrPreviewHost(h string) bool {
+	h = strings.ToLower(strings.TrimSpace(h))
 	return h == "" || h == "localhost" || h == "127.0.0.1" || h == "::1" || h == "[::1]" ||
-		strings.HasSuffix(h, ".pages.dev") ||
+		h == "deanprice-com.pages.dev" ||
+		strings.HasSuffix(h, ".deanprice-com.pages.dev") ||
 		strings.HasSuffix(h, ".local") ||
 		strings.HasSuffix(h, ".lan") ||
 		strings.HasSuffix(h, ".ts.net") ||
