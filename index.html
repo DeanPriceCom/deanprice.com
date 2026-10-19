@@ -722,6 +722,12 @@
             hostname.endsWith(".lan") ||
             hostname.endsWith(".ts.net") ||
             PRIVATE_IPV4_REGEX.test(hostname);
+        var cleanHost = hostname.replace(/^www\./, "");
+        var isAuthorizedHost = isDevOrPreview ||
+            cleanHost === "deanprice.com" ||
+            cleanHost === "deanprice.uk" ||
+            cleanHost === "deanprice.tr" ||
+            cleanHost === "deanprice.ie";
 
         // Support client-side regional preview fallback for static or offline environments
         var countryParam = isDevOrPreview ? params.get('country') : null;
@@ -762,6 +768,10 @@
             triggerShield('legacy');
         } else {
             // 5. Normal modern browser runtime
+            var wasmPath = "/main.wasm";
+            var wasmFetchPromise = fetch(wasmPath, { mode: 'cors' });
+            wasmFetchPromise.catch(function () {});
+
             function initWasm() {
                 try {
                     if (typeof Go === "undefined") throw new Error("wasm_exec.js failed to load.");
@@ -770,18 +780,29 @@
                     if (go.importObject.env) go.importObject.env["syscall/js.finalizeRef"] = function () { };
                     if (go.importObject.gojs) go.importObject.gojs["syscall/js.finalizeRef"] = function () { };
 
-                    var wasmPath = "/main.wasm";
                     var contactChannels = ['email', 'phone', 'whatsapp'];
 
                     var hasStreaming = Boolean(window.WebAssembly && typeof window.WebAssembly.instantiateStreaming === "function");
                     var loadPromise = hasStreaming
-                        ? WebAssembly.instantiateStreaming(fetch(wasmPath, { mode: 'cors' }), go.importObject)
-                        : fetch(wasmPath, { mode: 'cors' }).then(function (res) { return res.arrayBuffer(); }).then(function (bytes) { return WebAssembly.instantiate(bytes, go.importObject); });
+                        ? WebAssembly.instantiateStreaming(wasmFetchPromise, go.importObject)
+                        : wasmFetchPromise.then(function (res) { return res.arrayBuffer(); }).then(function (bytes) { return WebAssembly.instantiate(bytes, go.importObject); });
 
                     loadPromise.then(function (result) {
                         var instance = result.instance || result;
-                        go.run(instance);
+                        go.run(instance).catch(function (runErr) {
+                            var runMsg = runErr && (runErr.message || String(runErr)) || 'WASM runtime trap';
+                            if (isAuthorizedHost) {
+                                sendReport({
+                                    type: 'wasm_hydration_error',
+                                    message: runMsg,
+                                    url: window.location.pathname,
+                                    ts: Date.now()
+                                });
+                            }
+                            triggerShield('blocked');
+                        });
 
+                        var validCount = 0;
                         contactChannels.forEach(function (channel) {
                             var elements = document.querySelectorAll('[data-contact="' + channel + '"]');
                             var resolved = (typeof window.getWasmContact === 'function') ? window.getWasmContact(channel) : null;
@@ -790,18 +811,31 @@
                                 resolved.indexOf('tel:') === 0 ||
                                 resolved.indexOf('https://wa.me/') === 0
                             );
-                            elements.forEach(function (el) {
-                                if (isValid) {
+                            if (isValid) {
+                                validCount++;
+                                elements.forEach(function (el) {
                                     el.setAttribute('href', resolved);
                                     el.removeAttribute('tabindex');
                                     el.removeAttribute('aria-disabled');
-                                }
-                            });
+                                });
+                            }
                         });
 
-                        var iconrow = document.getElementById('iconrow');
-                        if (iconrow) {
-                            iconrow.classList.add('ready');
+                        if (validCount === contactChannels.length) {
+                            var iconrow = document.getElementById('iconrow');
+                            if (iconrow) {
+                                iconrow.classList.add('ready');
+                            }
+                        } else {
+                            if (isAuthorizedHost && typeof window.getWasmContact === 'function') {
+                                sendReport({
+                                    type: 'wasm_hydration_error',
+                                    message: 'Contact resolution validation failed',
+                                    url: window.location.pathname,
+                                    ts: Date.now()
+                                });
+                            }
+                            triggerShield('blocked');
                         }
                     }).catch(function (err) {
                         var errMsg = err && (err.message || String(err)) || '';
@@ -809,7 +843,7 @@
                             (err && err.name === 'AbortError') ||
                             /failed to fetch|networkerror|load failed|aborted/i.test(errMsg);
 
-                        if (!isNetworkDrop) {
+                        if (!isNetworkDrop && isAuthorizedHost) {
                             sendReport({
                                 type: 'wasm_hydration_error',
                                 message: errMsg,
@@ -821,12 +855,14 @@
                     });
                 } catch (criticalError) {
                     var critMsg = criticalError && criticalError.message || String(criticalError);
-                    sendReport({
-                        type: 'wasm_hydration_error',
-                        message: critMsg,
-                        url: window.location.pathname,
-                        ts: Date.now()
-                    });
+                    if (isAuthorizedHost) {
+                        sendReport({
+                            type: 'wasm_hydration_error',
+                            message: critMsg,
+                            url: window.location.pathname,
+                            ts: Date.now()
+                        });
+                    }
                     triggerShield('blocked');
                 }
             }

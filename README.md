@@ -26,18 +26,18 @@ A deliberately over-engineered personal identity card and systems sandbox. Engin
 ## 🏛️ Architectural Highlights
 
 ### 1. Micro-WebAssembly Runtime (TinyGo)
-* Compiled with **TinyGo** (`-opt=z -no-debug -panic=trap`) and post-optimised with Binaryen's `wasm-opt -Oz` into a <!-- wasm-size -->**41.7 KB micro-WASM binary** (17.5 KB gzipped)<!-- /wasm-size -->, compared to ~2.5 MB standard Go.
-* Stripped of the standard Go runtime scheduler, timer queues, reflection, and panic unwinding, executing in **<2 ms** directly inside the browser's native WebAssembly engine.
+* Compiled with **TinyGo** (`-opt=z -no-debug -panic=trap`) and post-optimised with Binaryen's `wasm-opt -Oz` into a <!-- wasm-size -->**41.6 KB micro-WASM binary** (17.5 KB gzipped)<!-- /wasm-size -->, compared to ~2.5 MB standard Go.
+* Eliminates standard Go's heavy OS-thread runtime, reflection, and panic unwinding overhead, executing contact resolution and DOM hydration in **<2 ms** directly inside the browser's native WebAssembly engine.
 
 ### 2. Domain-Bound Obfuscation & Scraper Resistance
 * **Algorithm:** 64-bit Donald Knuth Linear Congruential Generator (LCG) coupled with Sebastiano Vigna & Guy Steele's **SplitMix64** non-linear bit diffusion.
-* **Domain-Bound & Target-Verified:** Keystreams are mathematically locked to `location.hostname`, field nonces, and a runtime initialisation context—providing friction-based static scraper and regex mitigation without intrusive CAPTCHAs or interaction delays.
+* **Domain-Bound & Target-Verified:** Keystreams are bound to authorized `location.hostname` domains, field nonces, and runtime initialisation context—providing friction-based static scraper and regex mitigation without intrusive CAPTCHAs or interaction delays.
 * **Deterministic Build-Time Seed Injection:** Production contact values and master seeds are injected exclusively at compile time via Cloudflare Pages environment variables, guarded by CI assertions to ensure **zero plaintexts or master seeds exist in the repository**.
 
 ### 3. Edge-Driven Regional Localisation
 * Cloudflare Pages Middleware (`functions/_middleware.js`) dynamically injects a `<meta name="cf-country">` tag at the CDN edge using streaming `HTMLRewriter`.
 * Automatically selects regional dialling numbers with zero UI dropdowns, international dial code confusion, or client-side network waterfalls.
-* Cloudflare Pages `_routes.json` routes only HTML document requests to middleware, serving all static assets directly from the global CDN at 0ms Worker cost.
+* Cloudflare Pages `_routes.json` restricts Edge Functions execution strictly to HTML document routes (`/`, `/index.html`), dynamic `/robots.txt`, and the `/api/report` telemetry endpoint, serving all static assets directly from the global CDN at 0ms Worker cost.
 
 ### 4. Sub-2ms Synchronous DOM Hydration & Static Honeypots
 * Automated web crawlers and scrapers that parse static HTML are diverted to public honeypot decoy addresses embedded in the raw markup.

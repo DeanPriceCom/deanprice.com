@@ -17,6 +17,7 @@ import (
 
 var countryRegex = regexp.MustCompile(`^(?:[A-Za-z]{2}|[Tt]1)$`)
 var distFlag = flag.Bool("dist", false, "Serve from dist/ instead of workspace root")
+var addrFlag = flag.String("addr", "127.0.0.1:8080", "Address to listen on")
 
 func init() {
 	// Ensure proper MIME types for WebAssembly, images, text, SVG, and icons
@@ -105,9 +106,9 @@ func isAliasHost(host string) bool {
 		host = h
 	}
 	host = strings.TrimPrefix(strings.ToLower(strings.TrimSpace(host)), "www.")
-	return host == "deanprice.uk" || strings.HasSuffix(host, ".deanprice.uk") ||
-		host == "deanprice.tr" || strings.HasSuffix(host, ".deanprice.tr") ||
-		host == "deanprice.ie" || strings.HasSuffix(host, ".deanprice.ie") ||
+	return host == "deanprice.uk" ||
+		host == "deanprice.tr" ||
+		host == "deanprice.ie" ||
 		host == "deanprice-com.pages.dev" || strings.HasSuffix(host, ".deanprice-com.pages.dev")
 }
 
@@ -117,17 +118,20 @@ func extractCountry(r *http.Request) string {
 		host = h
 	}
 	host = strings.TrimPrefix(strings.ToLower(strings.TrimSpace(host)), "www.")
-	if host == "deanprice.tr" || strings.HasSuffix(host, ".deanprice.tr") {
+	if host == "deanprice.tr" {
 		return "TR"
 	}
-	if host == "deanprice.ie" || strings.HasSuffix(host, ".deanprice.ie") {
+	if host == "deanprice.ie" {
 		return "IE"
 	}
-	if host == "deanprice.uk" || strings.HasSuffix(host, ".deanprice.uk") {
+	if host == "deanprice.uk" {
 		return "GB"
 	}
 
 	country := r.URL.Query().Get("country")
+	if country == "" {
+		country = r.Header.Get("CF-IPCountry")
+	}
 	if countryRegex.MatchString(country) {
 		return strings.ToUpper(country)
 	}
@@ -266,8 +270,8 @@ func main() {
 	mux := http.NewServeMux()
 	mux.Handle("/", newDevHandler(baseDir))
 
-	log.Printf("Go Dev Server running at http://localhost:8080 (serving from %s)\n", baseDir)
-	if err := http.ListenAndServe(":8080", mux); err != nil {
+	log.Printf("Go Dev Server running at http://%s (serving from %s)\n", *addrFlag, baseDir)
+	if err := http.ListenAndServe(*addrFlag, mux); err != nil {
 		log.Fatal(err)
 	}
 }

@@ -67,18 +67,29 @@ self.addEventListener('fetch', (event) => {
   // Navigation requests (HTML document): Network-First with tight timeout fallback
   if (event.request.mode === 'navigate' || url.pathname === '/' || url.pathname === '/index.html') {
     const TIMEOUT_MS = 1200;
+    const isRootDoc = url.pathname === '/' || url.pathname === '/index.html';
 
     event.respondWith(
       (async () => {
         const cache = await caches.open(STATIC_CACHE);
 
         const timeoutPromise = new Promise((resolve) => setTimeout(resolve, TIMEOUT_MS));
-        const fetchPromise = fetch(event.request).then(async (response) => {
-          if (response && response.ok && !url.search) {
-            await cache.put('/', response.clone());
+        let cachePutPromise;
+        const fetchPromise = fetch(event.request).then((response) => {
+          if (
+            isRootDoc &&
+            response &&
+            response.ok &&
+            !url.search &&
+            (response.headers.get('content-type') || '').includes('text/html')
+          ) {
+            const copy = response.clone();
+            cachePutPromise = cache.put('/', copy).catch(() => {});
           }
           return response;
         }).catch(() => null);
+
+        event.waitUntil(fetchPromise.then(() => cachePutPromise));
 
         const networkResponse = await Promise.race([fetchPromise, timeoutPromise.then(() => null)]);
 
@@ -87,7 +98,7 @@ self.addEventListener('fetch', (event) => {
         }
 
         // Offline or network timeout -> serve cached version (ignoring query strings like ?utm_source=pwa)
-        const cached = await cache.match(event.request, { ignoreSearch: true }) || await cache.match('/');
+        const cached = await cache.match(event.request, { ignoreSearch: true }) || (isRootDoc ? await cache.match('/') : null);
         if (cached) {
           return cached;
         }

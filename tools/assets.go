@@ -23,7 +23,9 @@ var iconFiles = []struct {
 func syncAssets() error {
 	baseDir := "."
 	if _, err := os.Stat("index.html"); os.IsNotExist(err) {
-		if _, err := os.Stat(filepath.Join("..", "..", "index.html")); err == nil {
+		if _, err := os.Stat(filepath.Join("..", "index.html")); err == nil {
+			baseDir = ".."
+		} else if _, err := os.Stat(filepath.Join("..", "..", "index.html")); err == nil {
 			baseDir = filepath.Join("..", "..")
 		}
 	}

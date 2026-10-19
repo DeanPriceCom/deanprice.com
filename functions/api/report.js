@@ -77,22 +77,19 @@ const KNOWN_EXTENSION_POLICIES = /^(?:AGPolicy|goog#html|lit-html|emscripten#wor
 
 function isFirstPartySource(filename) {
   if (!filename || typeof filename !== "string") return false;
-  if (filename.startsWith("/")) return true;
+  if (filename.startsWith("/") && !filename.startsWith("//")) return true;
   if (!/^https?:\/\//i.test(filename)) return false;
 
   try {
     const host = new URL(filename).hostname.toLowerCase();
+    const cleanHost = host.replace(/^www\./, "");
     return (
-      host === "deanprice.com" ||
-      host.endsWith(".deanprice.com") ||
-      host === "deanprice.uk" ||
-      host.endsWith(".deanprice.uk") ||
-      host === "deanprice.tr" ||
-      host.endsWith(".deanprice.tr") ||
-      host === "deanprice.ie" ||
-      host.endsWith(".deanprice.ie") ||
-      host === "deanprice-com.pages.dev" ||
-      host.endsWith(".deanprice-com.pages.dev") ||
+      cleanHost === "deanprice.com" ||
+      cleanHost === "deanprice.uk" ||
+      cleanHost === "deanprice.tr" ||
+      cleanHost === "deanprice.ie" ||
+      cleanHost === "deanprice-com.pages.dev" ||
+      cleanHost.endsWith(".deanprice-com.pages.dev") ||
       host === "localhost" ||
       host === "127.0.0.1" ||
       host === "::1" ||
@@ -314,29 +311,39 @@ function normalizeReports(rawJson) {
   return reports;
 }
 
+function sanitizeInlineCode(str, maxLen) {
+  const s = asString(str).replace(/`/g, "'").replace(/[\r\n]+/g, " ");
+  return truncate(s, maxLen);
+}
+
+function sanitizeCodeBlock(str, maxLen) {
+  const s = asString(str).replace(/```/g, "'''");
+  return truncate(s, maxLen);
+}
+
 async function sendDiscordNotification(webhookUrl, report) {
   if (!webhookUrl) return;
 
   const color = COLOR_MAP[report.severity] || COLOR_MAP.gray;
   const fields = [
-    { name: "Type", value: `\`${truncate(report.type, 100)}\``, inline: true },
-    { name: "URL / Path", value: `\`${truncate(report.url || "/", 100)}\``, inline: true }
+    { name: "Type", value: `\`${sanitizeInlineCode(report.type, 100)}\``, inline: true },
+    { name: "URL / Path", value: `\`${sanitizeInlineCode(report.url || "/", 100)}\``, inline: true }
   ];
 
   if (report.location) {
-    fields.push({ name: "Location", value: `\`${truncate(report.location, 150)}\``, inline: false });
+    fields.push({ name: "Location", value: `\`${sanitizeInlineCode(report.location, 150)}\``, inline: false });
   }
   if (report.directive) {
-    fields.push({ name: "Directive", value: `\`${truncate(report.directive, 150)}\``, inline: true });
+    fields.push({ name: "Directive", value: `\`${sanitizeInlineCode(report.directive, 150)}\``, inline: true });
   }
   if (report.blocked) {
-    fields.push({ name: "Blocked Resource", value: `\`${truncate(report.blocked, 200)}\``, inline: false });
+    fields.push({ name: "Blocked Resource", value: `\`${sanitizeInlineCode(report.blocked, 200)}\``, inline: false });
   }
   if (report.sample) {
-    fields.push({ name: "Sample", value: `\`${truncate(report.sample, 200)}\``, inline: false });
+    fields.push({ name: "Sample", value: `\`${sanitizeInlineCode(report.sample, 200)}\``, inline: false });
   }
 
-  const detailContent = truncate(report.details || report.message, 1000);
+  const detailContent = sanitizeCodeBlock(report.details || report.message, 1000);
   if (detailContent) {
     fields.push({
       name: "Details",

@@ -3,23 +3,41 @@ package contact
 import (
 	"fmt"
 	"os"
+	"strings"
 	"testing"
 
 	"deanprice.com/internal/defaults"
 )
 
 var (
-	testEmail   = getEnv("SECRET_EMAIL", defaults.DefaultEmail)
-	testPhoneGB = getEnv("SECRET_PHONE_GB", defaults.DefaultPhoneGB)
-	testPhoneIE = getEnv("SECRET_PHONE_IE", defaults.DefaultPhoneIE)
-	testPhoneTR = getEnv("SECRET_PHONE_TR", defaults.DefaultPhoneTR)
+	testEmail   = getEmailEnv("SECRET_EMAIL", defaults.DefaultEmail)
+	testPhoneGB = getPhoneEnv("SECRET_PHONE_GB", defaults.DefaultPhoneGB)
+	testPhoneIE = getPhoneEnv("SECRET_PHONE_IE", defaults.DefaultPhoneIE)
+	testPhoneTR = getPhoneEnv("SECRET_PHONE_TR", defaults.DefaultPhoneTR)
 )
 
-func getEnv(key, fallback string) string {
-	if v := os.Getenv(key); v != "" {
-		return v
+func getCleanEnv(key, fallback string) string {
+	if v := strings.TrimSpace(os.Getenv(key)); v != "" {
+		v = strings.TrimSpace(strings.Trim(v, `"'`))
+		if v != "" {
+			return v
+		}
 	}
 	return fallback
+}
+
+func getEmailEnv(key, fallback string) string {
+	v := getCleanEnv(key, fallback)
+	return strings.TrimPrefix(v, "mailto:")
+}
+
+func getPhoneEnv(key, fallback string) string {
+	v := getCleanEnv(key, fallback)
+	v = strings.TrimPrefix(v, "tel:")
+	if v != "" && !strings.HasPrefix(v, "+") {
+		v = "+" + v
+	}
+	return v
 }
 
 func TestEmailDecryptionAllHosts(t *testing.T) {
@@ -102,7 +120,18 @@ func TestWhatsAppDecryptionAllRegions(t *testing.T) {
 }
 
 func TestDomainLockProtection(t *testing.T) {
-	unauthorizedHosts := []string{"evil-scraper.com", "unauthorized-mirror.com", "deanprice.org", "phishing-deanprice.com", "evil.pages.dev", "fake-deanprice-com.pages.dev"}
+	unauthorizedHosts := []string{
+		"evil-scraper.com",
+		"unauthorized-mirror.com",
+		"deanprice.org",
+		"phishing-deanprice.com",
+		"evil.pages.dev",
+		"fake-deanprice-com.pages.dev",
+		"sub.deanprice.com",
+		"preview.deanprice.tr",
+		"sub.deanprice.uk",
+		"sub.deanprice.ie",
+	}
 	for _, host := range unauthorizedHosts {
 		got := decrypt(emailBytes, host, "email")
 		if got == "mailto:"+testEmail {
@@ -137,14 +166,13 @@ func TestResolveCountryWithHost(t *testing.T) {
 		t.Errorf("Expected default GB for deanprice.com with empty loc, got %q", got)
 	}
 
-	// 3. Offline / un-injected fallback: inspect hostname suffix
+	// 3. Offline / un-injected fallback: inspect hostname
 	fallbackTests := []struct {
 		host     string
 		expected string
 	}{
 		{"deanprice.tr", "TR"},
 		{"www.deanprice.tr", "TR"},
-		{"preview.deanprice.tr", "TR"},
 		{"DEANPRICE.TR", "TR"},
 		{"deanprice.ie", "IE"},
 		{"www.deanprice.ie", "IE"},

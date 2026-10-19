@@ -132,11 +132,11 @@ export async function onRequest(context) {
                          PRIVATE_IPV4_REGEX.test(hostname);
 
   let rawCountry = "";
-  if (cleanHost === "deanprice.uk" || cleanHost.endsWith(".deanprice.uk")) {
+  if (cleanHost === "deanprice.uk") {
     rawCountry = "GB";
-  } else if (cleanHost === "deanprice.tr" || cleanHost.endsWith(".deanprice.tr")) {
+  } else if (cleanHost === "deanprice.tr") {
     rawCountry = "TR";
-  } else if (cleanHost === "deanprice.ie" || cleanHost.endsWith(".deanprice.ie")) {
+  } else if (cleanHost === "deanprice.ie") {
     rawCountry = "IE";
   } else {
     const queryCountry = isDevOrPreview

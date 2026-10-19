@@ -138,7 +138,7 @@ func init() {
 	if err != nil {
 		return fmt.Errorf("failed to write %s: %w", targetPath, err)
 	}
-	fmt.Printf("Successfully generated domain-locked and fully salted %s (seed: 0x%x)\n", targetPath, seed)
+	fmt.Printf("Successfully generated domain-locked and fully salted %s\n", targetPath)
 
 	return nil
 }

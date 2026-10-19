@@ -31,7 +31,7 @@ go vet ./...
 # Regenerate keystreams, assets, and synchronize CSP hashes in _headers
 go generate ./...
 ```
-> **IMPORTANT:** Running `go generate ./...` invokes `go run ./tools -task=codegen`. If any inline scripts or styles in `index.html` change, you **must** run `go generate ./...` to update the SHA-256 script hashes in `_headers`. CI will fail if `_headers` is out of sync (`git diff --exit-code _headers`).
+> **IMPORTANT:** Running `go generate ./...` invokes `go run ./tools -task=codegen`. If the inline script in `index.html` or any source asset in `.assets/` changes, you **must** run `go generate ./...` to synchronize embedded assets and update the SHA-256 `script-src` hash in `_headers`. CI will fail if `_headers`, `index.html`, or `404.html` is out of sync (`git diff --exit-code _headers index.html 404.html`).
 
 ### 3. Running Unit Tests
 ```bash
@@ -61,10 +61,10 @@ bash scripts/build.sh
 1. **Never use standard Go (`GOOS=js GOARCH=wasm go build`) for production binaries:**
    Standard Go produces a ~2.5 MB binary with runtime scheduler overhead. This repository strictly targets **TinyGo** with `-opt=z -no-debug -panic=trap` to keep `main.wasm` under 50 KB.
 2. **Never break Content Security Policy (CSP Level 3):**
-   `_headers` strictly enforces `script-src` and `style-src` hashes and `trusted-types`. Do not insert raw unhashed inline scripts or remote third-party scripts without updating `_headers` via `go generate ./...`.
+   `_headers` strictly enforces `script-src` SHA-256 hashes, `object-src 'none'`, and `trusted-types`. Do not insert raw unhashed inline scripts or remote third-party scripts without updating `_headers` via `go generate ./...`.
 3. **Preserve Edge Middleware Separation:**
    `functions/_middleware.js` runs on Cloudflare Workers and streams HTML modifications (e.g. `<meta name="cf-country">`). Static routing rules live in `_routes.json`. Do not break the route mappings.
 4. **Preserve Test Integrity:**
-   `main_test.go` contains comprehensive tests verifying embedded asset hashes, phone number formatting across countries, honeypot decoy addresses, and domain-bound obfuscation. All tests must pass cleanly.
+   `main_test.go` and `internal/contact/contact_test.go` contain comprehensive tests verifying embedded asset hashes, regional phone number resolution, honeypot decoy disambiguation, edge telemetry behavior, and domain-bound obfuscation. All tests must pass cleanly.
 5. **Keep zero external Go dependencies:**
    Do not run `go get` for external packages unless explicitly requested.

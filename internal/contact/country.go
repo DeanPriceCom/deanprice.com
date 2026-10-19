@@ -17,13 +17,13 @@ func ResolveCountryWithHost(loc string, hostname string) string {
 	// 1. Regional alias domains are strictly deterministic
 	cleanHost := strings.ToLower(strings.TrimSpace(hostname))
 	cleanHost = strings.TrimPrefix(cleanHost, "www.")
-	if cleanHost == "deanprice.tr" || strings.HasSuffix(cleanHost, ".deanprice.tr") {
+	if cleanHost == "deanprice.tr" {
 		return "TR"
 	}
-	if cleanHost == "deanprice.ie" || strings.HasSuffix(cleanHost, ".deanprice.ie") {
+	if cleanHost == "deanprice.ie" {
 		return "IE"
 	}
-	if cleanHost == "deanprice.uk" || strings.HasSuffix(cleanHost, ".deanprice.uk") {
+	if cleanHost == "deanprice.uk" {
 		return "GB"
 	}
 

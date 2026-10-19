@@ -1027,6 +1027,134 @@ function makeContext(request, env = { DISCORD_WEBHOOK_URL: "https://discord.exam
   });
   const blockedEvilRes = await onRequestOptions({ request: blockedEvilReq });
   assert.equal(blockedEvilRes.headers.get("Access-Control-Allow-Origin"), "https://www.deanprice.com");
+
+  const blockedSubReq = new Request("https://www.deanprice.com/api/report", {
+    method: "OPTIONS",
+    headers: { "Origin": "https://sub.deanprice.com" }
+  });
+  const blockedSubRes = await onRequestOptions({ request: blockedSubReq });
+  assert.equal(blockedSubRes.headers.get("Access-Control-Allow-Origin"), "https://www.deanprice.com");
+}
+
+// Test 7: Protocol-relative //evil.com is dropped for Trusted Types, and backticks are sanitized in Discord embeds
+{
+  _resetStateForTesting();
+  webhookCalls = [];
+  const ttProtocolRel = {
+    "csp-report": {
+      "blocked-uri": "trusted-types-sink",
+      "violated-directive": "require-trusted-types-for",
+      "source-file": "//evil.com/injected.js",
+      "document-uri": "https://www.deanprice.com/"
+    }
+  };
+  const reqDrop = new Request("https://www.deanprice.com/api/report", {
+    method: "POST",
+    headers: { "Content-Type": "application/csp-report" },
+    body: JSON.stringify(ttProtocolRel)
+  });
+  const ctxDrop = makeContext(reqDrop);
+  await onRequestPost(ctxDrop);
+  await ctxDrop.flush();
+  assert.equal(webhookCalls.length, 0, "Expected protocol-relative //evil.com Trusted Types report to be dropped");
+
+  const backtickPayload = {
+    type: "err\x60inject",
+    message: "msg \x60\x60\x60breakout\x60\x60\x60 here",
+    url: "/path\x60test"
+  };
+  const reqSanitize = new Request("https://www.deanprice.com/api/report", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(backtickPayload)
+  });
+  const ctxSanitize = makeContext(reqSanitize);
+  await onRequestPost(ctxSanitize);
+  await ctxSanitize.flush();
+  assert.equal(webhookCalls.length, 1, "Expected sanitized report to dispatch");
+  const embed = JSON.parse(webhookCalls[0].init.body).embeds[0];
+  const typeField = embed.fields.find((f) => f.name === "Type").value;
+  const detailsField = embed.fields.find((f) => f.name === "Details").value;
+  assert.equal(typeField, "\x60err'inject\x60", "Expected inline backticks to be replaced with single quotes");
+  assert.ok(!detailsField.slice(3, -3).includes("\x60\x60\x60"), "Expected triple backticks inside Details code block to be sanitized");
+}
+
+// Test 8: Middleware domain & geo routing behavior
+{
+  globalThis.HTMLRewriter = class {
+    constructor() { this.handlers = []; }
+    on(selector, handler) { this.handlers.push({ selector, handler }); return this; }
+    transform(response) {
+      return new Response(response.body, { status: response.status, headers: response.headers });
+    }
+  };
+  const { onRequest } = await import("./functions/_middleware.js");
+
+  // Alias domain www.deanprice.tr gets noindex, sub.deanprice.tr does not
+  const resAlias = await onRequest({
+    request: new Request("https://www.deanprice.tr/"),
+    next: async () => new Response("<html><head></head><body></body></html>", { headers: { "Content-Type": "text/html" } })
+  });
+  assert.equal(resAlias.headers.get("X-Robots-Tag"), "noindex, nofollow, noarchive, nosnippet");
+
+  const resNonAliasSub = await onRequest({
+    request: new Request("https://sub.deanprice.tr/"),
+    next: async () => new Response("<html><head></head><body></body></html>", { headers: { "Content-Type": "text/html" } })
+  });
+  assert.equal(resNonAliasSub.headers.get("X-Robots-Tag"), null);
+}
+
+// Test 9: Service Worker navigation cache isolation (/llms.txt does not overwrite /)
+{
+  const listeners = {};
+  const putCalls = [];
+  let waitUntilCalledSync = false;
+  globalThis.self = {
+    location: { origin: "https://www.deanprice.com" },
+    skipWaiting: () => {},
+    clients: { claim: () => {} },
+    addEventListener(type, fn) { listeners[type] = fn; }
+  };
+  globalThis.caches = {
+    open: async () => ({
+      addAll: async () => {},
+      put: async (key, resp) => { putCalls.push({ key, ct: resp.headers.get("content-type") }); },
+      match: async () => null
+    }),
+    keys: async () => [],
+    match: async () => null
+  };
+
+  await import("./sw.js");
+
+  // Navigate to /llms.txt (text/plain) -> must NOT cache into '/'
+  globalThis.fetch = async () => new Response("# LLMs", { status: 200, headers: { "Content-Type": "text/plain" } });
+  let respondPromise;
+  let responding = true;
+  const waitPromises = [];
+  listeners.fetch({
+    request: { method: "GET", url: "https://www.deanprice.com/llms.txt", mode: "navigate" },
+    respondWith(p) { respondPromise = p; },
+    waitUntil(p) { if (responding) waitUntilCalledSync = true; waitPromises.push(p); }
+  });
+  await respondPromise;
+  await Promise.all(waitPromises);
+  assert.equal(putCalls.length, 0, "Expected /llms.txt navigation NOT to overwrite '/' cache");
+
+  // Navigate to / (text/html) -> MUST cache into '/' and register waitUntil
+  globalThis.fetch = async () => new Response("<!DOCTYPE html>", { status: 200, headers: { "Content-Type": "text/html; charset=utf-8" } });
+  waitUntilCalledSync = false;
+  listeners.fetch({
+    request: { method: "GET", url: "https://www.deanprice.com/", mode: "navigate" },
+    respondWith(p) { respondPromise = p; },
+    waitUntil(p) { if (responding) waitUntilCalledSync = true; waitPromises.push(p); }
+  });
+  await respondPromise;
+  responding = false;
+  await Promise.all(waitPromises);
+  assert.equal(putCalls.length, 1, "Expected '/' HTML navigation to update '/' cache");
+  assert.equal(putCalls[0].key, "/");
+  assert.ok(waitUntilCalledSync, "Expected event.waitUntil to be registered before respondWith settled");
 }
 `
 
