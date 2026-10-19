@@ -632,7 +632,7 @@
             </div>
         </div>
     </div>
-    <script src="/wasm_exec.js" defer></script>
+    <script src="/wasm_exec.js" defer fetchpriority="low"></script>
     <script id="wasm-engine">
         var sentReports = {};
         var reportCount = 0;
@@ -769,7 +769,7 @@
         } else {
             // 5. Normal modern browser runtime
             var wasmPath = "/main.wasm";
-            var wasmFetchPromise = fetch(wasmPath, { mode: 'cors' });
+            var wasmFetchPromise = fetch(wasmPath, { mode: 'cors', priority: 'low' });
             wasmFetchPromise.catch(function () {});
 
             function initWasm() {
