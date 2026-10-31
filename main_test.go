@@ -170,6 +170,12 @@ func TestShieldAndCSPIntegrity(t *testing.T) {
 	if !strings.Contains(string(headersBytes), expectedCSPHash) {
 		t.Errorf("CSP hash mismatch in _headers! Expected %s, run 'go generate ./...' to synchronize", expectedCSPHash)
 	}
+	if !strings.Contains(string(headersBytes), "Strict-Transport-Security: max-age=31536000; includeSubDomains; preload") {
+		t.Errorf("_headers missing global Strict-Transport-Security preload directive")
+	}
+	if !strings.Contains(string(headersBytes), "! Access-Control-Allow-Origin") {
+		t.Errorf("_headers missing '! Access-Control-Allow-Origin' directive to strip default static wildcard CORS")
+	}
 }
 
 func TestReadmeWasmSizeIntegrity(t *testing.T) {
@@ -732,10 +738,18 @@ func TestCrawlerParityIntegrity(t *testing.T) {
 		// Mistral AI (2)
 		{"MistralAI-User", "MistralAI-User", "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; MistralAI-User/1.0; +https://docs.mistral.ai/robots)", true},
 		{"MistralAI-Index", "MistralAI-Index", "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; MistralAI-Index/1.0; +https://docs.mistral.ai/robots)", true},
-		// Core Search Engines (3)
+		// Core & Regional Search Engines (11)
 		{"Bravebot", "Bravebot", "Mozilla/5.0 (compatible; Bravebot/1.0; +https://brave.com/search/crawler/)", false},
 		{"Bingbot", "Bingbot", "Mozilla/5.0 (compatible; bingbot/2.0; +http://www.bing.com/bingbot.htm)", false},
 		{"Applebot", "Applebot", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Safari/605.1.15 (Applebot/0.1; +http://www.apple.com/go/applebot)", false},
+		{"DuckDuckBot", "DuckDuckBot", "DuckDuckBot/1.1; (+http://duckduckgo.com/duckduckbot.html)", false},
+		{"Slurp", "Slurp", "Mozilla/5.0 (compatible; Yahoo! Slurp; http://help.yahoo.com/help/us/ysearch/slurp)", false},
+		{"Baiduspider", "Baiduspider", "Mozilla/5.0 (compatible; Baiduspider/2.0; +http://www.baidu.com/search/spider.html)", false},
+		{"Yandex", "Yandex", "Mozilla/5.0 (compatible; YandexBot/3.0; +http://yandex.com/bots)", false},
+		{"Seznambot", "Seznambot", "Mozilla/5.0 (compatible; SeznamBot/3.2; +http://napoveda.seznam.cz/en/seznambot-intro/)", false},
+		{"Yeti", "Yeti", "Mozilla/5.0 (compatible; Yeti/1.1; +https://naver.me/spd)", false},
+		{"NaverBot", "NaverBot", "Mozilla/5.0 (compatible; NaverBot/1.0; +http://help.naver.com/robots/)", false},
+		{"Sogou web spider", "Sogou web spider", "Sogou web spider/4.0(+http://www.sogou.com/docs/help/webmasters.htm#07)", false},
 		// Frontier & Foundation AI Crawlers (11)
 		{"Applebot-Extended", "Applebot-Extended", "Mozilla/5.0 (Applebot-Extended/0.1; +http://www.apple.com/go/applebot)", true},
 		{"DuckAssistBot", "DuckAssistBot", "Mozilla/5.0 (compatible; DuckAssistBot/1.0; +http://duckduckgo.com/duckassistbot.html)", true},
@@ -756,10 +770,15 @@ func TestCrawlerParityIntegrity(t *testing.T) {
 		vipSection = robotsStr[:idx]
 	}
 
-	// Extract AI Disallow section from ALIAS_ROBOTS_TXT
+	// Extract AI Disallow and Search Allow sections from ALIAS_ROBOTS_TXT
 	aliasAIDisallow := middlewareStr
+	aliasSearchAllow := ""
 	if idx := strings.Index(middlewareStr, "# Allow Search Indexers"); idx != -1 {
 		aliasAIDisallow = middlewareStr[:idx]
+		aliasSearchAllow = middlewareStr[idx:]
+		if catchIdx := strings.Index(aliasSearchAllow, "# Catch-all"); catchIdx != -1 {
+			aliasSearchAllow = aliasSearchAllow[:catchIdx]
+		}
 	}
 
 	for _, crawler := range crawlersToVerify {
@@ -774,9 +793,15 @@ func TestCrawlerParityIntegrity(t *testing.T) {
 			t.Errorf("index.html isBot regex failed to detect User-Agent for %s: %q", crawler.name, crawler.userAgent)
 		}
 
-		// Verify AI crawlers are explicitly disallowed on alias/preview domains
-		if crawler.disallowOnAlias && !strings.Contains(aliasAIDisallow, expectedDirective) {
-			t.Errorf("ALIAS_ROBOTS_TXT AI disallow block missing %q", expectedDirective)
+		// Verify AI crawlers are explicitly disallowed on alias/preview domains, and search crawlers are allowed to read noindex
+		if crawler.disallowOnAlias {
+			if !strings.Contains(aliasAIDisallow, expectedDirective) {
+				t.Errorf("ALIAS_ROBOTS_TXT AI disallow block missing %q", expectedDirective)
+			}
+		} else {
+			if !strings.Contains(aliasSearchAllow, expectedDirective) {
+				t.Errorf("ALIAS_ROBOTS_TXT Search allow block missing %q (causes robots.txt vs noindex trap)", expectedDirective)
+			}
 		}
 	}
 
@@ -875,7 +900,7 @@ func TestReportEndpointBehavior(t *testing.T) {
 	// 2. Execute behavioral test suite against functions/api/report.js
 	script := `
 import assert from "node:assert/strict";
-import { onRequestPost, onRequestOptions, _resetStateForTesting } from "./functions/api/report.js";
+import { onRequest as onReportFallback, onRequestPost, onRequestOptions, _resetStateForTesting } from "./functions/api/report.js";
 
 // Silence expected console.error/warn telemetry output during tests
 console.error = () => {};
@@ -1081,8 +1106,13 @@ function makeContext(request, env = { DISCORD_WEBHOOK_URL: "https://discord.exam
   assert.ok(!detailsField.slice(3, -3).includes("\x60\x60\x60"), "Expected triple backticks inside Details code block to be sanitized");
 }
 
-// Test 8: Middleware domain & geo routing behavior
+// Test 8: Middleware domain, geo routing & CORS stripping behavior + /api/report 405 fallback
 {
+  const getReportRes = await onReportFallback({ request: new Request("https://www.deanprice.com/api/report", { method: "GET" }) });
+  assert.equal(getReportRes.status, 405, "Expected 405 Method Not Allowed for GET /api/report");
+  assert.equal(getReportRes.headers.get("Allow"), "POST, OPTIONS");
+  assert.equal(getReportRes.headers.get("X-Robots-Tag"), "noindex, nofollow, noarchive");
+
   globalThis.HTMLRewriter = class {
     constructor() { this.handlers = []; }
     on(selector, handler) { this.handlers.push({ selector, handler }); return this; }
@@ -1092,18 +1122,27 @@ function makeContext(request, env = { DISCORD_WEBHOOK_URL: "https://discord.exam
   };
   const { onRequest } = await import("./functions/_middleware.js");
 
-  // Alias domain www.deanprice.tr gets noindex, sub.deanprice.tr does not
+  // Alias domain www.deanprice.tr gets noindex and strips upstream wildcard CORS, sub.deanprice.tr does not get alias noindex
   const resAlias = await onRequest({
     request: new Request("https://www.deanprice.tr/"),
-    next: async () => new Response("<html><head></head><body></body></html>", { headers: { "Content-Type": "text/html" } })
+    next: async () => new Response("<html><head></head><body></body></html>", { headers: { "Content-Type": "text/html", "Access-Control-Allow-Origin": "*" } })
   });
   assert.equal(resAlias.headers.get("X-Robots-Tag"), "noindex, nofollow, noarchive, nosnippet");
+  assert.equal(resAlias.headers.get("Access-Control-Allow-Origin"), null, "Expected middleware to strip wildcard Access-Control-Allow-Origin from Geo HTML");
+  assert.equal(resAlias.headers.get("Strict-Transport-Security"), "max-age=31536000; includeSubDomains; preload");
+
+  const resPrimary = await onRequest({
+    request: new Request("https://www.deanprice.com/"),
+    next: async () => new Response("<html><head></head><body></body></html>", { headers: { "Content-Type": "text/html", "Access-Control-Allow-Origin": "*" } })
+  });
+  assert.equal(resPrimary.headers.get("Access-Control-Allow-Origin"), null, "Expected middleware to strip wildcard Access-Control-Allow-Origin on primary domain");
 
   const resNonAliasSub = await onRequest({
     request: new Request("https://sub.deanprice.tr/"),
-    next: async () => new Response("<html><head></head><body></body></html>", { headers: { "Content-Type": "text/html" } })
+    next: async () => new Response("<html><head></head><body></body></html>", { headers: { "Content-Type": "text/html", "Access-Control-Allow-Origin": "*" } })
   });
   assert.equal(resNonAliasSub.headers.get("X-Robots-Tag"), null);
+  assert.equal(resNonAliasSub.headers.get("Access-Control-Allow-Origin"), null);
 }
 
 // Test 9: Service Worker navigation cache isolation (/llms.txt does not overwrite /)
@@ -1158,18 +1197,19 @@ function makeContext(request, env = { DISCORD_WEBHOOK_URL: "https://discord.exam
   assert.equal(putCalls[0].key, "/");
   assert.ok(waitUntilCalledSync, "Expected event.waitUntil to be registered before respondWith settled");
 
-  // Navigate to Go vanity routes -> must bypass Service Worker completely (respondWith not called)
-  for (const vanityURL of [
+  // Navigate to Cloudflare platform & Go vanity routes -> must bypass Service Worker completely (respondWith not called)
+  for (const bypassURL of [
+    "https://www.deanprice.com/cdn-cgi/speculation",
     "https://www.deanprice.com/wasm-contact-cipher?go-get=1",
     "https://www.deanprice.com/wasm-contact-cipher/examples/wasm?go-get=1"
   ]) {
     let intercepted = false;
     listeners.fetch({
-      request: { method: "GET", url: vanityURL, mode: "navigate" },
+      request: { method: "GET", url: bypassURL, mode: "navigate" },
       respondWith() { intercepted = true; },
       waitUntil() {}
     });
-    assert.equal(intercepted, false, "Expected Service Worker to bypass Go vanity route: " + vanityURL);
+    assert.equal(intercepted, false, "Expected Service Worker to bypass edge route: " + bypassURL);
   }
 }
 `
@@ -1281,7 +1321,8 @@ func TestVanityImportIntegrity(t *testing.T) {
 		!strings.Contains(htmlStr, `"@id": "https://www.deanprice.com/#wasm-contact-cipher"`) ||
 		!strings.Contains(htmlStr, `"codeRepository": "https://github.com/DeanPriceCom/wasm-contact-cipher"`) ||
 		!strings.Contains(htmlStr, `"10.5281/zenodo.23826355"`) ||
-		!strings.Contains(htmlStr, `"https://pkg.go.dev/deanprice.com/wasm-contact-cipher"`) {
-		t.Errorf("index.html JSON-LD @graph missing expected SoftwareSourceCode node, Concept DOI, or pkg.go.dev sameAs")
+		!strings.Contains(htmlStr, `"https://pkg.go.dev/deanprice.com/wasm-contact-cipher"`) ||
+		!strings.Contains(htmlStr, `"https://archive.softwareheritage.org/browse/origin/directory/?origin_url=https://github.com/DeanPriceCom/wasm-contact-cipher"`) {
+		t.Errorf("index.html JSON-LD @graph missing expected SoftwareSourceCode node, Concept DOI, pkg.go.dev, or Software Heritage sameAs")
 	}
 }

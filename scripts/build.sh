@@ -72,11 +72,11 @@ echo "==> Optimizing with wasm-opt -Oz..."
 echo "==> Synchronizing README.md WASM size metrics..."
 "${GO_CMD}" run ./tools -task=readme
 
-# 7. Ensure wasm_exec.js exists in workspace root
+# 7. Ensure wasm_exec.js exists in workspace root (with ES5 optional-chaining patch matching CI)
 if [ ! -f wasm_exec.js ]; then
     TINYGOROOT="$(${TINYGO_CMD} env TINYGOROOT)"
-    echo "==> Copying wasm_exec.js from ${TINYGOROOT}..."
-    cp "${TINYGOROOT}/targets/wasm_exec.js" .
+    echo "==> Provisioning patched wasm_exec.js from ${TINYGOROOT}..."
+    sed 's/this\._goRefCounts?\.\[id\]/this._goRefCounts \&\& this._goRefCounts[id]/' "${TINYGOROOT}/targets/wasm_exec.js" > wasm_exec.js
 fi
 
 # 8. Assemble isolated dist/ deployment bundle

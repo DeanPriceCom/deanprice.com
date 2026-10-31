@@ -72,19 +72,29 @@ Disallow: /
 
 # Allow Search Indexers and Social Bots to fetch root so they read noindex & OG tags
 User-agent: Googlebot
+User-agent: Google-InspectionTool
 User-agent: Bravebot
 User-agent: Bingbot
+User-agent: DuckDuckBot
+User-agent: Slurp
 User-agent: WhatsApp
 User-agent: TelegramBot
 User-agent: Twitterbot
 User-agent: LinkedInBot
+User-agent: Pinterestbot
 User-agent: Applebot
-User-agent: facebookexternalhit
+User-agent: FacebookExternalHit
 User-agent: Facebot
 User-agent: Slackbot
 User-agent: Slackbot-LinkExpanding
 User-agent: Discordbot
 User-agent: Brave-CommandBot
+User-agent: Baiduspider
+User-agent: Yandex
+User-agent: Seznambot
+User-agent: Yeti
+User-agent: NaverBot
+User-agent: Sogou web spider
 Allow: /$
 Allow: /index.html
 Allow: /manifest.json
@@ -176,8 +186,10 @@ func handleRootHTML(w http.ResponseWriter, r *http.Request, htmlBytes []byte) {
 	meta := fmt.Sprintf("<meta name=\"cf-country\" content=\"%s\">\n    ", country)
 	injected := bytes.Replace(htmlBytes, []byte("<head>"), []byte("<head>\n    "+meta), 1)
 
+	w.Header().Del("Access-Control-Allow-Origin")
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	w.Header().Set("Cache-Control", "no-store, no-cache, must-revalidate")
+	w.Header().Set("Cache-Control", "private, no-cache, no-store, must-revalidate")
+	w.Header().Set("Strict-Transport-Security", "max-age=31536000; includeSubDomains; preload")
 
 	if isAliasHost(r.Host) {
 		w.Header().Set("X-Robots-Tag", "noindex, nofollow, noarchive, nosnippet")
@@ -210,17 +222,26 @@ func newDevHandler(customBaseDir ...string) http.Handler {
 			w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 			w.Header().Set("X-Robots-Tag", "noindex, nofollow, noarchive")
 			w.Header().Set("Cache-Control", "public, max-age=3600")
+			w.Header().Set("Strict-Transport-Security", "max-age=31536000; includeSubDomains; preload")
 			w.WriteHeader(http.StatusOK)
 			w.Write([]byte(aliasRobotsTxt))
 			return
 		}
 
 		if cleanPath == "/api/report" {
+			w.Header().Set("X-Robots-Tag", "noindex, nofollow, noarchive")
+			w.Header().Set("Cache-Control", "no-store, no-cache, must-revalidate")
+			w.Header().Set("Strict-Transport-Security", "max-age=31536000; includeSubDomains; preload")
+			if r.Method != http.MethodPost && r.Method != http.MethodOptions {
+				w.Header().Set("Allow", "POST, OPTIONS")
+				w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+				w.WriteHeader(http.StatusMethodNotAllowed)
+				w.Write([]byte("Method Not Allowed"))
+				return
+			}
 			w.Header().Set("Access-Control-Allow-Origin", "*")
 			w.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS")
 			w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
-			w.Header().Set("X-Robots-Tag", "noindex, nofollow, noarchive")
-			w.Header().Set("Cache-Control", "no-store, no-cache, must-revalidate")
 			w.WriteHeader(http.StatusNoContent)
 			return
 		}

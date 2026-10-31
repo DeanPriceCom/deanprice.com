@@ -389,6 +389,7 @@ export async function onRequestPost(context) {
   const responseHeaders = {
     "X-Robots-Tag": "noindex, nofollow, noarchive",
     "Cache-Control": "no-store, no-cache, must-revalidate",
+    "Strict-Transport-Security": "max-age=31536000; includeSubDomains; preload",
     "Access-Control-Allow-Origin": resolveCorsOrigin(request),
     "Access-Control-Allow-Methods": "POST, OPTIONS",
     "Access-Control-Allow-Headers": "Content-Type",
@@ -473,7 +474,21 @@ export async function onRequestOptions(context) {
       "Access-Control-Max-Age": "86400",
       "Vary": "Origin",
       "X-Robots-Tag": "noindex, nofollow, noarchive",
-      "Cache-Control": "no-store, no-cache, must-revalidate"
+      "Cache-Control": "no-store, no-cache, must-revalidate",
+      "Strict-Transport-Security": "max-age=31536000; includeSubDomains; preload"
+    }
+  });
+}
+
+export async function onRequest() {
+  return new Response("Method Not Allowed", {
+    status: 405,
+    headers: {
+      "Allow": "POST, OPTIONS",
+      "Content-Type": "text/plain; charset=utf-8",
+      "X-Robots-Tag": "noindex, nofollow, noarchive",
+      "Cache-Control": "no-store, no-cache, must-revalidate",
+      "Strict-Transport-Security": "max-age=31536000; includeSubDomains; preload"
     }
   });
 }

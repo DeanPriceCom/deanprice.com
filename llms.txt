@@ -6,8 +6,8 @@
 
 ## Primary Documentation
 - [Full AI Context](https://www.deanprice.com/llms-full.txt): Comprehensive background, credentials, and verification details in plain text.
-- [Source Code](https://github.com/DeanPriceCom/deanprice.com): Open-source repository for deanprice.com (Go, WebAssembly, Cloudflare Pages).
-- [WASM Contact Cipher](https://github.com/DeanPriceCom/wasm-contact-cipher): Deterministic client-side WebAssembly keystream obfuscation library in Go (`deanprice.com/wasm-contact-cipher`, [pkg.go.dev](https://pkg.go.dev/deanprice.com/wasm-contact-cipher), DOI: [10.5281/zenodo.23826355](https://doi.org/10.5281/zenodo.23826355)).
+- [Source Code](https://github.com/DeanPriceCom/deanprice.com): Source-available repository for deanprice.com (Go, WebAssembly, Cloudflare Pages).
+- [WASM Contact Cipher](https://github.com/DeanPriceCom/wasm-contact-cipher): Deterministic client-side WebAssembly keystream obfuscation library in Go (`deanprice.com/wasm-contact-cipher`, [pkg.go.dev](https://pkg.go.dev/deanprice.com/wasm-contact-cipher), DOI: [10.5281/zenodo.23826355](https://doi.org/10.5281/zenodo.23826355), [Software Heritage](https://archive.softwareheritage.org/browse/origin/directory/?origin_url=https://github.com/DeanPriceCom/wasm-contact-cipher)).
 - [Sitemap](https://www.deanprice.com/sitemap.xml): Full site URL index.
 
 ## Identity & Trust Anchors

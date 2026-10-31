@@ -56,19 +56,29 @@ Disallow: /
 
 # Allow Search Indexers and Social Bots to fetch root so they read noindex & OG tags
 User-agent: Googlebot
+User-agent: Google-InspectionTool
 User-agent: Bravebot
 User-agent: Bingbot
+User-agent: DuckDuckBot
+User-agent: Slurp
 User-agent: WhatsApp
 User-agent: TelegramBot
 User-agent: Twitterbot
 User-agent: LinkedInBot
+User-agent: Pinterestbot
 User-agent: Applebot
-User-agent: facebookexternalhit
+User-agent: FacebookExternalHit
 User-agent: Facebot
 User-agent: Slackbot
 User-agent: Slackbot-LinkExpanding
 User-agent: Discordbot
 User-agent: Brave-CommandBot
+User-agent: Baiduspider
+User-agent: Yandex
+User-agent: Seznambot
+User-agent: Yeti
+User-agent: NaverBot
+User-agent: Sogou web spider
 Allow: /$
 Allow: /index.html
 Allow: /manifest.json
@@ -106,7 +116,8 @@ export async function onRequest(context) {
         headers: {
           "Content-Type": "text/plain; charset=utf-8",
           "Cache-Control": "public, max-age=3600",
-          "X-Robots-Tag": "noindex, nofollow, noarchive"
+          "X-Robots-Tag": "noindex, nofollow, noarchive",
+          "Strict-Transport-Security": "max-age=31536000; includeSubDomains; preload"
         }
       });
     }
@@ -157,9 +168,11 @@ export async function onRequest(context) {
 
   const transformed = rewriter.transform(response);
 
-  // Prevent upstream CDN caching of personalized Geo HTML
+  // Prevent upstream CDN caching or cross-origin reading of personalized Geo HTML
   const headers = new Headers(transformed.headers);
+  headers.delete("Access-Control-Allow-Origin");
   headers.set("Cache-Control", "private, no-cache, no-store, must-revalidate");
+  headers.set("Strict-Transport-Security", "max-age=31536000; includeSubDomains; preload");
 
   if (isAliasDomain) {
     headers.set("X-Robots-Tag", "noindex, nofollow, noarchive, nosnippet");
