@@ -53,6 +53,7 @@ Allow: /easter-egg
 Allow: /main.wasm
 Allow: /wasm_exec.js
 Allow: /sw.js
+Allow: /wasm-contact-cipher*
 
 # Default Deny: Block all paths not explicitly allowed above
 Disallow: /
@@ -101,6 +102,7 @@ User-agent: *
 Allow: /llms.txt
 Allow: /llms-full.txt
 Allow: /sitemap.xml
+Allow: /wasm-contact-cipher*
 Disallow: /
 
 # =================================== #

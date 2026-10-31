@@ -94,6 +94,7 @@ Allow: /*.svg
 Allow: /main.wasm
 Allow: /wasm_exec.js
 Allow: /sw.js
+Allow: /wasm-contact-cipher*
 Disallow: /
 
 # Catch-all for other crawlers
@@ -232,6 +233,20 @@ func newDevHandler(customBaseDir ...string) http.Handler {
 			}
 
 			handleRootHTML(w, r, htmlBytes)
+			return
+		}
+
+		if cleanPath == "/wasm-contact-cipher" || strings.HasPrefix(cleanPath, "/wasm-contact-cipher/") {
+			vanityBytes, err := readServerFile(baseDir, "wasm-contact-cipher.html")
+			if err != nil {
+				http.Error(w, "Failed to load wasm-contact-cipher.html", http.StatusInternalServerError)
+				return
+			}
+			w.Header().Set("Content-Type", "text/html; charset=utf-8")
+			w.Header().Set("X-Robots-Tag", "noindex, nofollow, noarchive")
+			w.Header().Set("Cache-Control", "public, max-age=3600, must-revalidate")
+			w.WriteHeader(http.StatusOK)
+			w.Write(vanityBytes)
 			return
 		}
 

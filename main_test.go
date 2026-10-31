@@ -6,7 +6,9 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
+	"encoding/xml"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -243,7 +245,7 @@ func TestServiceWorkerCacheIntegrity(t *testing.T) {
 	}
 
 	// 1. Ensure control/config files and SEO crawler files are strictly ABSENT from App Shell cache
-	bannedPatterns := []string{"_headers", "_routes.json", "robots.txt", "sitemap.xml", "llms"}
+	bannedPatterns := []string{"_headers", "_redirects", "_routes.json", "robots.txt", "sitemap.xml", "llms", "wasm-contact-cipher"}
 
 	for _, m := range assetMatches {
 		urlPath := m[1]
@@ -1155,11 +1157,129 @@ function makeContext(request, env = { DISCORD_WEBHOOK_URL: "https://discord.exam
   assert.equal(putCalls.length, 1, "Expected '/' HTML navigation to update '/' cache");
   assert.equal(putCalls[0].key, "/");
   assert.ok(waitUntilCalledSync, "Expected event.waitUntil to be registered before respondWith settled");
+
+  // Navigate to Go vanity routes -> must bypass Service Worker completely (respondWith not called)
+  for (const vanityURL of [
+    "https://www.deanprice.com/wasm-contact-cipher?go-get=1",
+    "https://www.deanprice.com/wasm-contact-cipher/examples/wasm?go-get=1"
+  ]) {
+    let intercepted = false;
+    listeners.fetch({
+      request: { method: "GET", url: vanityURL, mode: "navigate" },
+      respondWith() { intercepted = true; },
+      waitUntil() {}
+    });
+    assert.equal(intercepted, false, "Expected Service Worker to bypass Go vanity route: " + vanityURL);
+  }
 }
 `
 
 	cmd := exec.Command(nodeBin, "--input-type=module", "-e", script)
 	if out, err := cmd.CombinedOutput(); err != nil {
 		t.Fatalf("Behavioral test suite for functions/api/report.js failed: %v\n%s", err, string(out))
+	}
+}
+
+func TestVanityImportIntegrity(t *testing.T) {
+	vanityBytes, err := os.ReadFile("wasm-contact-cipher.html")
+	if err != nil {
+		t.Fatalf("Failed to read wasm-contact-cipher.html: %v", err)
+	}
+	vanityStr := string(vanityBytes)
+
+	if strings.Contains(strings.ToLower(vanityStr), "<script") {
+		t.Errorf("wasm-contact-cipher.html must not contain <script> tags (preserves CSP Level 3 hash invariant)")
+	}
+
+	// Emulate Go's cmd/go/internal/vcs/discovery.go XML parser over <head>
+	decoder := xml.NewDecoder(bytes.NewReader(vanityBytes))
+	decoder.Strict = false
+	decoder.AutoClose = xml.HTMLAutoClose
+	decoder.Entity = xml.HTMLEntity
+
+	var goImportVal, goSourceVal, robotsVal string
+	inHead := false
+	for {
+		tok, err := decoder.Token()
+		if err != nil {
+			if err == io.EOF {
+				break
+			}
+			t.Fatalf("XML decoder failed while parsing wasm-contact-cipher.html: %v", err)
+		}
+		switch el := tok.(type) {
+		case xml.StartElement:
+			name := strings.ToLower(el.Name.Local)
+			if name == "head" {
+				inHead = true
+			} else if inHead && name == "meta" {
+				var attrName, attrContent string
+				for _, a := range el.Attr {
+					switch strings.ToLower(a.Name.Local) {
+					case "name":
+						attrName = strings.ToLower(a.Value)
+					case "content":
+						attrContent = a.Value
+					}
+				}
+				switch attrName {
+				case "go-import":
+					goImportVal = attrContent
+				case "go-source":
+					goSourceVal = attrContent
+				case "robots":
+					robotsVal = attrContent
+				}
+			}
+		case xml.EndElement:
+			if strings.EqualFold(el.Name.Local, "head") {
+				inHead = false
+			}
+		}
+	}
+
+	wantImport := "deanprice.com/wasm-contact-cipher git https://github.com/DeanPriceCom/wasm-contact-cipher"
+	if goImportVal != wantImport {
+		t.Errorf("go-import meta = %q, want %q", goImportVal, wantImport)
+	}
+	if goSourceVal != "" {
+		t.Errorf("go-source meta should be omitted so pkg.go.dev derives tag-pinned GitHub links, got %q", goSourceVal)
+	}
+	if robotsVal != "noindex, nofollow, noarchive" {
+		t.Errorf("robots meta = %q, want %q", robotsVal, "noindex, nofollow, noarchive")
+	}
+
+	// Verify Clean-URL subpath rewrite rule in _redirects
+	redirectsBytes, err := os.ReadFile("_redirects")
+	if err != nil {
+		t.Fatalf("Failed to read _redirects: %v", err)
+	}
+	redirectsStr := strings.TrimSpace(string(redirectsBytes))
+	if redirectsStr != "/wasm-contact-cipher/* /wasm-contact-cipher 200" {
+		t.Errorf("_redirects = %q, want %q", redirectsStr, "/wasm-contact-cipher/* /wasm-contact-cipher 200")
+	}
+	if strings.Contains(redirectsStr, ".html") {
+		t.Errorf("_redirects must target Clean URL without .html to avoid Wrangler strip-loop validation errors")
+	}
+
+	// Verify noindex route is excluded from sitemap.xml
+	sitemapBytes, err := os.ReadFile("sitemap.xml")
+	if err != nil {
+		t.Fatalf("Failed to read sitemap.xml: %v", err)
+	}
+	if strings.Contains(string(sitemapBytes), "wasm-contact-cipher") {
+		t.Errorf("sitemap.xml must not list noindex route /wasm-contact-cipher")
+	}
+
+	// Verify SoftwareSourceCode node exists in index.html JSON-LD @graph
+	htmlBytes, err := os.ReadFile("index.html")
+	if err != nil {
+		t.Fatalf("Failed to read index.html: %v", err)
+	}
+	htmlStr := string(htmlBytes)
+	if !strings.Contains(htmlStr, `"@type": "SoftwareSourceCode"`) ||
+		!strings.Contains(htmlStr, `"@id": "https://www.deanprice.com/#wasm-contact-cipher"`) ||
+		!strings.Contains(htmlStr, `"codeRepository": "https://github.com/DeanPriceCom/wasm-contact-cipher"`) {
+		t.Errorf("index.html JSON-LD @graph missing expected SoftwareSourceCode node for wasm-contact-cipher")
 	}
 }

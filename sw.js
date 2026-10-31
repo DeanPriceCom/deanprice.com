@@ -61,8 +61,9 @@ self.addEventListener('fetch', (event) => {
 
   const url = new URL(event.request.url);
 
-  // Allow Cloudflare edge to handle Easter egg redirect natively
-  if (url.pathname.startsWith('/easter-egg')) return;
+  // Allow Cloudflare edge to handle Easter egg and Go vanity module routes natively
+  if (url.pathname === '/easter-egg' || url.pathname.startsWith('/easter-egg/') ||
+      url.pathname === '/wasm-contact-cipher' || url.pathname.startsWith('/wasm-contact-cipher/')) return;
 
   // Navigation requests (HTML document): Network-First with tight timeout fallback
   if (event.request.mode === 'navigate' || url.pathname === '/' || url.pathname === '/index.html') {

@@ -78,6 +78,7 @@ Allow: /*.svg
 Allow: /main.wasm
 Allow: /wasm_exec.js
 Allow: /sw.js
+Allow: /wasm-contact-cipher*
 Disallow: /
 
 # Catch-all for other crawlers

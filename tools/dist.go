@@ -87,11 +87,13 @@ func assembleDist() error {
 	exactFiles := []string{
 		"index.html",
 		"404.html",
+		"wasm-contact-cipher.html",
 		"main.wasm",
 		"wasm_exec.js",
 		"manifest.json",
 		"robots.txt",
 		"_headers",
+		"_redirects",
 		"_routes.json",
 	}
 

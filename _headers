@@ -42,3 +42,8 @@
 /llms-full.txt
   Content-Type: text/plain; charset=utf-8
   Cache-Control: public, max-age=3600, must-revalidate
+
+# 6. GO VANITY MODULE HANDSHAKE
+/wasm-contact-cipher*
+  X-Robots-Tag: noindex, nofollow, noarchive
+  Cache-Control: public, max-age=3600, must-revalidate

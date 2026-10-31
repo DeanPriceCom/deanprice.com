@@ -7,6 +7,7 @@
 ## Primary Documentation
 - [Full AI Context](https://www.deanprice.com/llms-full.txt): Comprehensive background, credentials, and verification details in plain text.
 - [Source Code](https://github.com/DeanPriceCom/deanprice.com): Open-source repository for deanprice.com (Go, WebAssembly, Cloudflare Pages).
+- [WASM Contact Cipher](https://github.com/DeanPriceCom/wasm-contact-cipher): Deterministic client-side WebAssembly keystream obfuscation library in Go (`deanprice.com/wasm-contact-cipher`).
 - [Sitemap](https://www.deanprice.com/sitemap.xml): Full site URL index.
 
 ## Identity & Trust Anchors

@@ -152,6 +152,13 @@ func TestNewDevHandler_Dist(t *testing.T) {
 	if !strings.Contains(w.Body.String(), `<meta name="cf-country" content="IE">`) {
 		t.Errorf("expected meta tag in body for dist handler")
 	}
+
+	vanityReq := httptest.NewRequest("GET", "http://localhost:8080/wasm-contact-cipher?go-get=1", nil)
+	vanityW := httptest.NewRecorder()
+	handler.ServeHTTP(vanityW, vanityReq)
+	if vanityW.Code != 200 || !strings.Contains(vanityW.Body.String(), `name="go-import"`) {
+		t.Errorf("expected dist handler to serve vanity go-import with 200, got %d", vanityW.Code)
+	}
 }
 
 func TestNewDevHandler_NotFound(t *testing.T) {
@@ -291,5 +298,34 @@ func TestNewDevHandler_ApiReport(t *testing.T) {
 
 	if wOptions.Code != http.StatusNoContent {
 		t.Errorf("expected status 204 for OPTIONS /api/report, got %d", wOptions.Code)
+	}
+}
+
+func TestNewDevHandler_VanityImport(t *testing.T) {
+	handler := newDevHandler()
+
+	paths := []string{
+		"http://localhost:8080/wasm-contact-cipher?go-get=1",
+		"http://localhost:8080/wasm-contact-cipher/examples/wasm?go-get=1",
+		"http://localhost:8080/wasm-contact-cipher/",
+	}
+
+	for _, rawURL := range paths {
+		req := httptest.NewRequest(http.MethodGet, rawURL, nil)
+		w := httptest.NewRecorder()
+		handler.ServeHTTP(w, req)
+
+		if w.Code != http.StatusOK {
+			t.Errorf("expected status 200 for %s, got %d", rawURL, w.Code)
+		}
+		if ct := w.Header().Get("Content-Type"); !strings.Contains(ct, "text/html") {
+			t.Errorf("expected Content-Type text/html for %s, got %q", rawURL, ct)
+		}
+		if got := w.Header().Get("X-Robots-Tag"); got != "noindex, nofollow, noarchive" {
+			t.Errorf("expected X-Robots-Tag noindex, nofollow, noarchive for %s, got %q", rawURL, got)
+		}
+		if !strings.Contains(w.Body.String(), `<meta name="go-import" content="deanprice.com/wasm-contact-cipher git https://github.com/DeanPriceCom/wasm-contact-cipher">`) {
+			t.Errorf("expected go-import meta tag in body for %s", rawURL)
+		}
 	}
 }
