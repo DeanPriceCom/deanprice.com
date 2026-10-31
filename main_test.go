@@ -1271,7 +1271,7 @@ func TestVanityImportIntegrity(t *testing.T) {
 		t.Errorf("sitemap.xml must not list noindex route /wasm-contact-cipher")
 	}
 
-	// Verify SoftwareSourceCode node exists in index.html JSON-LD @graph
+	// Verify SoftwareSourceCode node exists in index.html JSON-LD @graph with Concept DOI and pkg.go.dev sameAs
 	htmlBytes, err := os.ReadFile("index.html")
 	if err != nil {
 		t.Fatalf("Failed to read index.html: %v", err)
@@ -1279,7 +1279,9 @@ func TestVanityImportIntegrity(t *testing.T) {
 	htmlStr := string(htmlBytes)
 	if !strings.Contains(htmlStr, `"@type": "SoftwareSourceCode"`) ||
 		!strings.Contains(htmlStr, `"@id": "https://www.deanprice.com/#wasm-contact-cipher"`) ||
-		!strings.Contains(htmlStr, `"codeRepository": "https://github.com/DeanPriceCom/wasm-contact-cipher"`) {
-		t.Errorf("index.html JSON-LD @graph missing expected SoftwareSourceCode node for wasm-contact-cipher")
+		!strings.Contains(htmlStr, `"codeRepository": "https://github.com/DeanPriceCom/wasm-contact-cipher"`) ||
+		!strings.Contains(htmlStr, `"10.5281/zenodo.23826355"`) ||
+		!strings.Contains(htmlStr, `"https://pkg.go.dev/deanprice.com/wasm-contact-cipher"`) {
+		t.Errorf("index.html JSON-LD @graph missing expected SoftwareSourceCode node, Concept DOI, or pkg.go.dev sameAs")
 	}
 }
