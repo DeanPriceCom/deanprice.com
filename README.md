@@ -33,11 +33,12 @@ A deliberately over-engineered personal identity card and systems sandbox. Engin
 * **Algorithm:** 64-bit Donald Knuth Linear Congruential Generator (LCG) coupled with Sebastiano Vigna & Guy Steele's **SplitMix64** non-linear bit diffusion.
 * **Domain-Bound & Target-Verified:** Keystreams are bound to authorized `location.hostname` domains, field nonces, and runtime initialisation context—providing friction-based static scraper and regex mitigation without intrusive CAPTCHAs or interaction delays.
 * **Deterministic Build-Time Seed Injection:** Production contact values and master seeds are injected exclusively at compile time via Cloudflare Pages environment variables, guarded by CI assertions to ensure **zero plaintexts or master seeds exist in the repository**.
+* **Open-Source Reference Library:** Extracted as a standalone, zero-dependency MIT Go/TinyGo module at [`deanprice.com/wasm-contact-cipher`](https://pkg.go.dev/deanprice.com/wasm-contact-cipher) ([GitHub](https://github.com/DeanPriceCom/wasm-contact-cipher) · [DOI: 10.5281/zenodo.23826355](https://doi.org/10.5281/zenodo.23826355) · [Software Heritage](https://archive.softwareheritage.org/browse/origin/directory/?origin_url=https://github.com/DeanPriceCom/wasm-contact-cipher)).
 
 ### 3. Edge-Driven Regional Localisation
 * Cloudflare Pages Middleware (`functions/_middleware.js`) dynamically injects a `<meta name="cf-country">` tag at the CDN edge using streaming `HTMLRewriter`.
 * Automatically selects regional dialling numbers with zero UI dropdowns, international dial code confusion, or client-side network waterfalls.
-* Cloudflare Pages `_routes.json` restricts Edge Functions execution strictly to HTML document routes (`/`, `/index.html`), dynamic `/robots.txt`, and the `/api/report` telemetry endpoint, serving all static assets directly from the global CDN at 0ms Worker cost.
+* Cloudflare Pages `_routes.json` restricts Edge Functions execution strictly to HTML document routes (`/`, `/index.html`), dynamic `/robots.txt`, and the `/api/report` telemetry endpoint, serving all static assets and the Go vanity module handshake (`/wasm-contact-cipher`) directly from the global CDN at 0ms Worker cost.
 
 ### 4. Sub-2ms Synchronous DOM Hydration & Static Honeypots
 * Automated web crawlers and scrapers that parse static HTML are diverted to public honeypot decoy addresses embedded in the raw markup.
