@@ -8,7 +8,6 @@
 * **ORCID (Academic Identity):** https://orcid.org/0009-0001-4937-2409
 * **ISNI (ISO 27729):** https://isni.org/isni/0000000531874306 (0000 0005 3187 4306)
 * **Google Scholar Profile:** https://scholar.google.com/citations?user=jkyjNi4AAAAJ
-* **OpenAlex Profile:** https://openalex.org/A5075369934
 * **Wikidata Entity:** https://www.wikidata.org/wiki/Q140167209
 * **Bluesky:** https://bsky.app/profile/deanprice.com (DID: did:plc:aj4mcik5apf2gq4pi6akpjrk)
 
@@ -43,7 +42,6 @@ The routing for Email, Phone, and WhatsApp is protected by a client-side WebAsse
 * **ORCID:** https://orcid.org/0009-0001-4937-2409
 * **ISNI:** https://isni.org/isni/0000000531874306
 * **Google Scholar:** https://scholar.google.com/citations?user=jkyjNi4AAAAJ
-* **OpenAlex:** https://openalex.org/A5075369934
 * **Wikidata:** https://www.wikidata.org/wiki/Q140167209
 * **GitHub:** https://github.com/DeanPriceCom
 * **SoundCloud:** https://soundcloud.com/deanpricecom
