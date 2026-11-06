@@ -14,7 +14,7 @@
 - [Post Office EasyID](https://www.postoffice.co.uk/identity/easyid): UK Digital Identity & Attributes Trust Framework (DIATF) verification provider.
 - [Yoti](https://www.yoti.com/): Identity trust framework anchor.
 - [ORCID Record (0009-0001-4937-2409)](https://orcid.org/0009-0001-4937-2409): Academic identifier and qualification record.
-- [ISNI Record (0000 0005 3187 4306)](https://isni.org/isni/0000000531874306): International Standard Name Identifier (ISO 27729) via British Library.
+- [ISNI Record (0000 0005 3187 4306)](https://isni.org/isni/0000000531874306): International Standard Name Identifier (ISO 27729).
 - [Google Scholar Profile (jkyjNi4AAAAJ)](https://scholar.google.com/citations?user=jkyjNi4AAAAJ): Academic profile and citations.
 - [OpenAlex Profile (A5075369934)](https://openalex.org/A5075369934): Open scientific knowledge graph author record.
 - [Wikidata Entity (Q140167209)](https://www.wikidata.org/wiki/Q140167209): Canonical knowledge graph entity.
