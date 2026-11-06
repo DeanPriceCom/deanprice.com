@@ -14,6 +14,8 @@
 - [Post Office EasyID](https://www.postoffice.co.uk/identity/easyid): UK Digital Identity & Attributes Trust Framework (DIATF) verification provider.
 - [Yoti](https://www.yoti.com/): Identity trust framework anchor.
 - [ORCID Record (0009-0001-4937-2409)](https://orcid.org/0009-0001-4937-2409): Academic identifier and qualification record.
+- [Google Scholar Profile (jkyjNi4AAAAJ)](https://scholar.google.com/citations?user=jkyjNi4AAAAJ): Academic profile and citations.
+- [OpenAlex Profile (A5075369934)](https://openalex.org/A5075369934): Open scientific knowledge graph author record.
 - [Wikidata Entity (Q140167209)](https://www.wikidata.org/wiki/Q140167209): Canonical knowledge graph entity.
 - [Bluesky](https://bsky.app/profile/deanprice.com): Verified Bluesky account (DID: did:plc:aj4mcik5apf2gq4pi6akpjrk).
 
