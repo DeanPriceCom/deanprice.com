@@ -17,6 +17,7 @@
 * **Institution:** University of Hertfordshire (UK) (https://www.herts.ac.uk/)
 * **Institution Wikidata:** https://www.wikidata.org/wiki/Q1745633
 * **Date of Award:** March 2015
+* **Master's Dissertation (2014):** "A Web Utility to Translate Objective Test Questions from the QML Format to the QTI 2.1 Format, and from the QTI 2.1 Format to the QML Format" (indexed on ORCID and Google Scholar).
 * **Independent Video Verification:**
   * Source: Official University of Hertfordshire YouTube Channel
   * Video Title: "University of Hertfordshire Awards Ceremony - March 2015"
