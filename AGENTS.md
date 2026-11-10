@@ -68,3 +68,5 @@ bash scripts/build.sh
    `main_test.go` and `internal/contact/contact_test.go` contain comprehensive tests verifying embedded asset hashes, regional phone number resolution, honeypot decoy disambiguation, edge telemetry behavior, and domain-bound obfuscation. All tests must pass cleanly.
 5. **Keep zero external Go dependencies:**
    Do not run `go get` for external packages unless explicitly requested.
+6. **Preserve Build-Stamped Template Placeholders:**
+   `sw.js` (`CACHE_VERSION_PLACEHOLDER`) and `sitemap.xml` (`LASTMOD_PLACEHOLDER`) are build-stamped templates populated during `dist/` assembly (`tools -task=dist`). Never commit literal commit SHAs or dates into those files (note also that swapping inline `data:` icon/font bytes alone does not advance `<lastmod>`).

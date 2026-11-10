@@ -1302,13 +1302,32 @@ func TestVanityImportIntegrity(t *testing.T) {
 		t.Errorf("_redirects must target Clean URL without .html to avoid Wrangler strip-loop validation errors")
 	}
 
-	// Verify noindex route is excluded from sitemap.xml
+	// Verify sitemap.xml template schema, placeholder invariant, and exclusion of noindex route
 	sitemapBytes, err := os.ReadFile("sitemap.xml")
 	if err != nil {
 		t.Fatalf("Failed to read sitemap.xml: %v", err)
 	}
 	if strings.Contains(string(sitemapBytes), "wasm-contact-cipher") {
 		t.Errorf("sitemap.xml must not list noindex route /wasm-contact-cipher")
+	}
+	var sitemapDoc struct {
+		XMLName xml.Name `xml:"urlset"`
+		URLs    []struct {
+			Loc     string `xml:"loc"`
+			LastMod string `xml:"lastmod"`
+		} `xml:"url"`
+	}
+	if err := xml.Unmarshal(sitemapBytes, &sitemapDoc); err != nil {
+		t.Fatalf("sitemap.xml is not valid XML: %v", err)
+	}
+	if sitemapDoc.XMLName.Space != "http://www.sitemaps.org/schemas/sitemap/0.9" {
+		t.Errorf("sitemap.xml namespace = %q, want %q", sitemapDoc.XMLName.Space, "http://www.sitemaps.org/schemas/sitemap/0.9")
+	}
+	if len(sitemapDoc.URLs) != 1 || sitemapDoc.URLs[0].Loc != "https://www.deanprice.com/" {
+		t.Fatalf("sitemap.xml URLs = %+v, want single https://www.deanprice.com/ entry", sitemapDoc.URLs)
+	}
+	if sitemapDoc.URLs[0].LastMod != "LASTMOD_PLACEHOLDER" {
+		t.Errorf("sitemap.xml <lastmod> = %q, want build-time template token %q", sitemapDoc.URLs[0].LastMod, "LASTMOD_PLACEHOLDER")
 	}
 
 	// Verify SoftwareSourceCode node exists in index.html JSON-LD @graph with Concept DOI and pkg.go.dev sameAs

@@ -3,10 +3,17 @@ set -euo pipefail
 
 echo "==> Starting build pipeline..."
 
-# 0. Resolve Go command
+# 0. Resolve Go & Git commands
 GO_CMD="go"
 if ! command -v go >/dev/null 2>&1 && command -v go.exe >/dev/null 2>&1; then
     GO_CMD="go.exe"
+fi
+
+GIT_CMD=""
+if command -v git >/dev/null 2>&1; then
+    GIT_CMD="git"
+elif command -v git.exe >/dev/null 2>&1; then
+    GIT_CMD="git.exe"
 fi
 
 TOOLS_DIR="$(pwd)/.tools"
@@ -80,6 +87,13 @@ if [ ! -f wasm_exec.js ]; then
 fi
 
 # 8. Assemble isolated dist/ deployment bundle
+if [ -n "${GIT_CMD}" ] && [ "$("${GIT_CMD}" rev-parse --is-shallow-repository 2>/dev/null)" = "true" ]; then
+    HEAD_SHA="$("${GIT_CMD}" rev-parse HEAD 2>/dev/null || true)"
+    echo "==> Unshallowing git history for sitemap lastmod (${CF_PAGES_COMMIT_SHA:-${HEAD_SHA}})..."
+    GIT_TERMINAL_PROMPT=0 "${GIT_CMD}" fetch --unshallow --quiet origin "${CF_PAGES_COMMIT_SHA:-${HEAD_SHA}}" \
+        || GIT_TERMINAL_PROMPT=0 "${GIT_CMD}" fetch --unshallow --quiet origin \
+        || echo "WARN: git unshallow failed; sitemap <lastmod> may be omitted" >&2
+fi
 echo "==> Assembling isolated dist/ bundle..."
 "${GO_CMD}" run ./tools -task=dist
 

@@ -13,6 +13,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"time"
 )
 
 var countryRegex = regexp.MustCompile(`^(?:[A-Za-z]{2}|[Tt]1)$`)
@@ -225,6 +226,21 @@ func newDevHandler(customBaseDir ...string) http.Handler {
 			w.Header().Set("Strict-Transport-Security", "max-age=31536000; includeSubDomains; preload")
 			w.WriteHeader(http.StatusOK)
 			w.Write([]byte(aliasRobotsTxt))
+			return
+		}
+
+		if cleanPath == "/sitemap.xml" {
+			sitemapBytes, err := readServerFile(baseDir, "sitemap.xml")
+			if err != nil {
+				http.Error(w, "Failed to load sitemap.xml", http.StatusInternalServerError)
+				return
+			}
+			today := time.Now().UTC().Format("2006-01-02")
+			stamped := strings.ReplaceAll(string(sitemapBytes), "LASTMOD_PLACEHOLDER", today)
+			w.Header().Set("Content-Type", "application/xml; charset=utf-8")
+			w.Header().Set("Strict-Transport-Security", "max-age=31536000; includeSubDomains; preload")
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte(stamped))
 			return
 		}
 

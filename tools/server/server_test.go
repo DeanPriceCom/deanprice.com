@@ -1,12 +1,14 @@
 package main
 
 import (
+	"encoding/xml"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestExtractCountry(t *testing.T) {
@@ -327,5 +329,40 @@ func TestNewDevHandler_VanityImport(t *testing.T) {
 		if !strings.Contains(w.Body.String(), `<meta name="go-import" content="deanprice.com/wasm-contact-cipher git https://github.com/DeanPriceCom/wasm-contact-cipher">`) {
 			t.Errorf("expected go-import meta tag in body for %s", rawURL)
 		}
+	}
+}
+
+func TestNewDevHandler_SitemapXML(t *testing.T) {
+	handler := newDevHandler()
+	req := httptest.NewRequest(http.MethodGet, "http://localhost:8080/sitemap.xml", nil)
+	w := httptest.NewRecorder()
+	handler.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected status 200 for /sitemap.xml, got %d", w.Code)
+	}
+	if ct := w.Header().Get("Content-Type"); !strings.Contains(ct, "application/xml") {
+		t.Errorf("expected Content-Type application/xml, got %q", ct)
+	}
+	body := w.Body.String()
+	if strings.Contains(body, "LASTMOD_PLACEHOLDER") {
+		t.Errorf("expected LASTMOD_PLACEHOLDER to be substituted in dev server response, got:\n%s", body)
+	}
+
+	var parsed struct {
+		XMLName xml.Name `xml:"urlset"`
+		URLs    []struct {
+			Loc     string `xml:"loc"`
+			LastMod string `xml:"lastmod"`
+		} `xml:"url"`
+	}
+	if err := xml.Unmarshal(w.Body.Bytes(), &parsed); err != nil {
+		t.Fatalf("failed to parse /sitemap.xml response as XML: %v", err)
+	}
+	if len(parsed.URLs) != 1 || parsed.URLs[0].Loc != "https://www.deanprice.com/" {
+		t.Fatalf("unexpected URLs in /sitemap.xml: %+v", parsed.URLs)
+	}
+	if _, err := time.Parse("2006-01-02", parsed.URLs[0].LastMod); err != nil {
+		t.Errorf("expected valid YYYY-MM-DD <lastmod>, got %q: %v", parsed.URLs[0].LastMod, err)
 	}
 }
