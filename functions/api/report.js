@@ -294,6 +294,8 @@ function normalizeReports(rawJson) {
     let severity = "red";
     if (resolvedType === "unhandled_rejection") {
       severity = "yellow";
+    } else if (resolvedType === "wasm_codegen_blocked") {
+      severity = "gray";
     }
 
     const loc = filename ? `${filename}:${lineno}:${colno}` : "unknown";
@@ -321,10 +323,20 @@ function sanitizeCodeBlock(str, maxLen) {
   return truncate(s, maxLen);
 }
 
+function extractClientInfo(request) {
+  const ua = asString(request.headers.get("user-agent")).trim();
+  const chUa = asString(request.headers.get("sec-ch-ua")).trim();
+  const client = {};
+  if (ua) client.userAgent = truncate(ua, 250);
+  if (chUa) client.secChUa = truncate(chUa, 150);
+  return client;
+}
+
 async function sendDiscordNotification(webhookUrl, report) {
   if (!webhookUrl) return;
 
   const color = COLOR_MAP[report.severity] || COLOR_MAP.gray;
+  const icon = report.severity === "gray" ? "ℹ️" : "🚨";
   const fields = [
     { name: "Type", value: `\`${sanitizeInlineCode(report.type, 100)}\``, inline: true },
     { name: "URL / Path", value: `\`${sanitizeInlineCode(report.url || "/", 100)}\``, inline: true }
@@ -342,6 +354,12 @@ async function sendDiscordNotification(webhookUrl, report) {
   if (report.sample) {
     fields.push({ name: "Sample", value: `\`${sanitizeInlineCode(report.sample, 200)}\``, inline: false });
   }
+  if (report.userAgent) {
+    fields.push({ name: "User-Agent", value: `\`${sanitizeInlineCode(report.userAgent, 250)}\``, inline: false });
+  }
+  if (report.secChUa) {
+    fields.push({ name: "Sec-CH-UA", value: `\`${sanitizeInlineCode(report.secChUa, 150)}\``, inline: false });
+  }
 
   const detailContent = sanitizeCodeBlock(report.details || report.message, 1000);
   if (detailContent) {
@@ -356,7 +374,7 @@ async function sendDiscordNotification(webhookUrl, report) {
     username: "DeanPrice.com Sentinel",
     embeds: [
       {
-        title: `🚨 ${truncate(report.message, 250)}`,
+        title: `${icon} ${truncate(report.message, 250)}`,
         color: color,
         fields: fields,
         timestamp: new Date().toISOString(),
@@ -446,9 +464,13 @@ export async function onRequestPost(context) {
   }
 
   const reports = normalizeReports(parsed);
+  const clientInfo = extractClientInfo(request);
   const webhookUrl = context.env?.DISCORD_WEBHOOK_URL || context.env?.ALERT_WEBHOOK_URL;
 
   for (const report of reports) {
+    if (clientInfo.userAgent) report.userAgent = clientInfo.userAgent;
+    if (clientInfo.secChUa) report.secChUa = clientInfo.secChUa;
+
     // Stream structured JSON to Cloudflare Real-Time Tail Logs
     console.error(`[telemetry] ${JSON.stringify(report)}`);
 

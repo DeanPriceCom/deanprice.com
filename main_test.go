@@ -167,14 +167,28 @@ func TestShieldAndCSPIntegrity(t *testing.T) {
 		t.Fatalf("Failed to read _headers: %v", err)
 	}
 
-	if !strings.Contains(string(headersBytes), expectedCSPHash) {
+	headersStr := string(headersBytes)
+	if !strings.Contains(headersStr, expectedCSPHash) {
 		t.Errorf("CSP hash mismatch in _headers! Expected %s, run 'go generate ./...' to synchronize", expectedCSPHash)
 	}
-	if !strings.Contains(string(headersBytes), "Strict-Transport-Security: max-age=31536000; includeSubDomains; preload") {
+	scriptSrcMatch := regexp.MustCompile(`script-src\s+[^;]+`).FindString(headersStr)
+	if !strings.Contains(scriptSrcMatch, "'wasm-unsafe-eval'") {
+		t.Errorf("_headers script-src directive missing required 'wasm-unsafe-eval' token (got %q)", scriptSrcMatch)
+	}
+	if strings.Contains(scriptSrcMatch, "'unsafe-eval'") {
+		t.Errorf("_headers script-src directive must not weaken CSP with 'unsafe-eval' (got %q)", scriptSrcMatch)
+	}
+	if !strings.Contains(scriptContent, "wasm_codegen_blocked") || !strings.Contains(scriptContent, "Array.prototype.findLast") {
+		t.Errorf("index.html wasm-engine script missing wasm_codegen_blocked classification or Array.prototype.findLast fallback check")
+	}
+	if !strings.Contains(headersStr, "Strict-Transport-Security: max-age=31536000; includeSubDomains; preload") {
 		t.Errorf("_headers missing global Strict-Transport-Security preload directive")
 	}
-	if !strings.Contains(string(headersBytes), "! Access-Control-Allow-Origin") {
+	if !strings.Contains(headersStr, "! Access-Control-Allow-Origin") {
 		t.Errorf("_headers missing '! Access-Control-Allow-Origin' directive to strip default static wildcard CORS")
+	}
+	if strings.Contains(headersStr, "browsing-topics") {
+		t.Errorf("_headers must not include deprecated Permissions-Policy feature 'browsing-topics'")
 	}
 }
 
@@ -1104,6 +1118,70 @@ function makeContext(request, env = { DISCORD_WEBHOOK_URL: "https://discord.exam
   const detailsField = embed.fields.find((f) => f.name === "Details").value;
   assert.equal(typeField, "\x60err'inject\x60", "Expected inline backticks to be replaced with single quotes");
   assert.ok(!detailsField.slice(3, -3).includes("\x60\x60\x60"), "Expected triple backticks inside Details code block to be sanitized");
+}
+
+// Test 7b: wasm_codegen_blocked uses gray informational severity and records User-Agent / Sec-CH-UA on both runtime and CSP reports
+{
+  _resetStateForTesting();
+  webhookCalls = [];
+  const codegenReq = new Request("https://www.deanprice.com/api/report", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "User-Agent": "Mozilla/5.0 Chrome/95.0.0.0 \x60Mobile\x60",
+      "Sec-CH-UA": "\"Chromium\";v=\"95\""
+    },
+    body: JSON.stringify({
+      type: "wasm_codegen_blocked",
+      message: "WebAssembly.compileStreaming(): Wasm code generation disallowed by embedder",
+      url: "/"
+    })
+  });
+  const ctxCodegen = makeContext(codegenReq);
+  const resCodegen = await onRequestPost(ctxCodegen);
+  await ctxCodegen.flush();
+  assert.equal(resCodegen.status, 204);
+  assert.equal(webhookCalls.length, 1, "Expected wasm_codegen_blocked report to dispatch");
+  const codegenEmbed = JSON.parse(webhookCalls[0].init.body).embeds[0];
+  assert.equal(codegenEmbed.color, 7041664, "Expected wasm_codegen_blocked to use gray informational severity");
+  assert.ok(codegenEmbed.title.startsWith("ℹ️ "), "Expected gray informational report to use info icon");
+  assert.equal(
+    codegenEmbed.fields.find((f) => f.name === "User-Agent").value,
+    "\x60Mozilla/5.0 Chrome/95.0.0.0 'Mobile'\x60",
+    "Expected sanitized User-Agent field on wasm_codegen_blocked embed"
+  );
+  assert.equal(
+    codegenEmbed.fields.find((f) => f.name === "Sec-CH-UA").value,
+    "\x60\"Chromium\";v=\"95\"\x60",
+    "Expected Sec-CH-UA field on wasm_codegen_blocked embed"
+  );
+
+  const cspReq = new Request("https://www.deanprice.com/api/report", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/csp-report",
+      "User-Agent": "Mozilla/5.0 Android WebView/95.0"
+    },
+    body: JSON.stringify({
+      "csp-report": {
+        "document-uri": "https://www.deanprice.com/",
+        "violated-directive": "script-src",
+        "blocked-uri": "eval"
+      }
+    })
+  });
+  const ctxCsp = makeContext(cspReq);
+  const resCsp = await onRequestPost(ctxCsp);
+  await ctxCsp.flush();
+  assert.equal(resCsp.status, 204);
+  assert.equal(webhookCalls.length, 2, "Expected legacy CSP report to dispatch");
+  const cspEmbed = JSON.parse(webhookCalls[1].init.body).embeds[0];
+  assert.equal(
+    cspEmbed.fields.find((f) => f.name === "User-Agent").value,
+    "\x60Mozilla/5.0 Android WebView/95.0\x60",
+    "Expected User-Agent field on legacy CSP report embed"
+  );
+  assert.equal(cspEmbed.fields.find((f) => f.name === "Sec-CH-UA"), undefined, "Expected absent Sec-CH-UA field to be omitted");
 }
 
 // Test 8: Middleware domain, geo routing & CORS stripping behavior + /api/report 405 fallback

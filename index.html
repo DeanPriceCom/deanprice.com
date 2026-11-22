@@ -883,16 +883,20 @@
                         var isNetworkDrop = !navigator.onLine ||
                             (err && err.name === 'AbortError') ||
                             /failed to fetch|networkerror|load failed|aborted/i.test(errMsg);
+                        var isCodegenBlocked = /wasm code generation disallowed|disallowed by embedder|unsafe-eval/i.test(errMsg);
 
                         if (!isNetworkDrop && isAuthorizedHost) {
                             sendReport({
-                                type: 'wasm_hydration_error',
+                                type: isCodegenBlocked ? 'wasm_codegen_blocked' : 'wasm_hydration_error',
                                 message: errMsg,
                                 url: window.location.pathname,
                                 ts: Date.now()
                             });
                         }
-                        triggerShield('blocked');
+                        var shieldReason = (isCodegenBlocked && typeof Array.prototype.findLast !== 'function')
+                            ? 'legacy'
+                            : 'blocked';
+                        triggerShield(shieldReason);
                     });
                 } catch (criticalError) {
                     var critMsg = criticalError && criticalError.message || String(criticalError);
