@@ -69,6 +69,7 @@ User-agent: Grok-Web
 User-agent: xAI-Bot
 User-agent: xAI-SearchBot
 User-agent: meta-externalfetcher
+User-agent: meta-webindexer
 Disallow: /
 
 # Allow Search Indexers and Social Bots to fetch root so they read noindex & OG tags

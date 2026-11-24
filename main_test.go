@@ -178,6 +178,10 @@ func TestShieldAndCSPIntegrity(t *testing.T) {
 	if strings.Contains(scriptSrcMatch, "'unsafe-eval'") {
 		t.Errorf("_headers script-src directive must not weaken CSP with 'unsafe-eval' (got %q)", scriptSrcMatch)
 	}
+	imgSrcMatch := regexp.MustCompile(`img-src\s+[^;]+`).FindString(headersStr)
+	if !strings.Contains(imgSrcMatch, "https://www.deanprice.com") {
+		t.Errorf("_headers img-src directive must permit canonical https://www.deanprice.com origin for alias-domain og:image loads (got %q)", imgSrcMatch)
+	}
 	if !strings.Contains(scriptContent, "wasm_codegen_blocked") || !strings.Contains(scriptContent, "Array.prototype.findLast") {
 		t.Errorf("index.html wasm-engine script missing wasm_codegen_blocked classification or Array.prototype.findLast fallback check")
 	}
@@ -764,11 +768,12 @@ func TestCrawlerParityIntegrity(t *testing.T) {
 		{"Yeti", "Yeti", "Mozilla/5.0 (compatible; Yeti/1.1; +https://naver.me/spd)", false},
 		{"NaverBot", "NaverBot", "Mozilla/5.0 (compatible; NaverBot/1.0; +http://help.naver.com/robots/)", false},
 		{"Sogou web spider", "Sogou web spider", "Sogou web spider/4.0(+http://www.sogou.com/docs/help/webmasters.htm#07)", false},
-		// Frontier & Foundation AI Crawlers (11)
+		// Frontier & Foundation AI Crawlers (12)
 		{"Applebot-Extended", "Applebot-Extended", "Mozilla/5.0 (Applebot-Extended/0.1; +http://www.apple.com/go/applebot)", true},
 		{"DuckAssistBot", "DuckAssistBot", "Mozilla/5.0 (compatible; DuckAssistBot/1.0; +http://duckduckgo.com/duckassistbot.html)", true},
 		{"meta-externalagent", "meta-externalagent", "Mozilla/5.0 (compatible; meta-externalagent/1.1; +https://developers.facebook.com/docs/sharing/webmasters/crawler)", true},
 		{"meta-externalfetcher", "meta-externalfetcher", "meta-externalfetcher/1.1 (+https://developers.facebook.com/docs/sharing/webmasters/web-crawlers)", true},
+		{"meta-webindexer", "meta-webindexer", "meta-webindexer/1.1 (+https://developers.facebook.com/docs/sharing/webmasters/crawler)", true},
 		{"Bytespider", "Bytespider", "Mozilla/5.0 (compatible; Bytespider; https://zhanzhang.toutiao.com/)", true},
 		{"cohere-ai", "cohere-ai", "Mozilla/5.0 (compatible; cohere-ai/1.0; +https://cohere.com/bot)", true},
 		{"DeepSeekBot", "DeepSeekBot", "Mozilla/5.0 (compatible; DeepSeekBot/1.0; +https://www.deepseek.com)", true},

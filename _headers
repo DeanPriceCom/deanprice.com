@@ -7,7 +7,7 @@
   Referrer-Policy: strict-origin-when-cross-origin
   Cross-Origin-Opener-Policy: same-origin
   Reporting-Endpoints: default="/api/report"
-  Content-Security-Policy: default-src 'self'; script-src 'self' 'wasm-unsafe-eval' 'sha256-9bCOPaQpKzgNnYdeZO50Ws4DokuywMBDEBA47BIBRhw='; style-src 'self' 'unsafe-inline'; object-src 'none'; font-src 'self' data:; img-src 'self' data:; connect-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; require-trusted-types-for 'script'; trusted-types swPolicy 'allow-duplicates'; report-to default; report-uri /api/report;
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'wasm-unsafe-eval' 'sha256-/9vzG94keBtSx8ljOTJAHWe3FQaC1z+GzByBr46Rfj8='; style-src 'self' 'unsafe-inline'; object-src 'none'; font-src 'self' data:; img-src 'self' data: https://www.deanprice.com; connect-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; require-trusted-types-for 'script'; trusted-types swPolicy 'allow-duplicates'; report-to default; report-uri /api/report;
   Permissions-Policy: camera=(), microphone=(), geolocation=()
 
 # 2. WASM ENGINE & EXECUTOR

@@ -86,6 +86,7 @@ User-agent: Applebot-Extended
 User-agent: DuckAssistBot
 User-agent: meta-externalagent
 User-agent: meta-externalfetcher
+User-agent: meta-webindexer
 User-agent: cohere-ai
 User-agent: DeepSeekBot
 User-agent: Bytespider
