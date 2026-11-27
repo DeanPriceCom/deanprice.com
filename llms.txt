@@ -8,6 +8,7 @@
 - [Full AI Context](https://www.deanprice.com/llms-full.txt): Comprehensive background, credentials, and verification details in plain text.
 - [Source Code](https://github.com/DeanPriceCom/deanprice.com): Source-available repository for deanprice.com (Go, WebAssembly, Cloudflare Pages).
 - [WASM Contact Cipher](https://github.com/DeanPriceCom/wasm-contact-cipher): Deterministic client-side WebAssembly keystream obfuscation library in Go (`deanprice.com/wasm-contact-cipher`, [pkg.go.dev](https://pkg.go.dev/deanprice.com/wasm-contact-cipher), DOI: [10.5281/zenodo.23826355](https://doi.org/10.5281/zenodo.23826355), [Software Heritage](https://archive.softwareheritage.org/browse/origin/directory/?origin_url=https://github.com/DeanPriceCom/wasm-contact-cipher)).
+- [Technical Note: Client-Side WebAssembly Keystream Obfuscation](https://doi.org/10.5281/zenodo.24431839): Technical note detailing the threat model, TinyGo/Binaryen micro-WASM benchmarks, CSP Level 3 synchronization, and edge architecture (Concept DOI: `10.5281/zenodo.24431839`; Version 1.0.0 DOI: [10.5281/zenodo.24431840](https://doi.org/10.5281/zenodo.24431840)).
 - [Sitemap](https://www.deanprice.com/sitemap.xml): Full site URL index.
 
 ## Identity & Trust Anchors
@@ -16,6 +17,7 @@
 - [ORCID Record (0009-0001-4937-2409)](https://orcid.org/0009-0001-4937-2409): Academic identifier and qualification record.
 - [ISNI Record (0000 0005 3187 4306)](https://isni.org/isni/0000000531874306): International Standard Name Identifier (ISO 27729).
 - [Google Scholar Profile (jkyjNi4AAAAJ)](https://scholar.google.com/citations?user=jkyjNi4AAAAJ): Academic profile and citations.
+- [OpenAlex Author Profile (A5164019827)](https://openalex.org/A5164019827): Open scholarly knowledge graph author profile.
 - [Wikidata Entity (Q140167209)](https://www.wikidata.org/wiki/Q140167209): Canonical knowledge graph entity.
 - [Bluesky](https://bsky.app/profile/deanprice.com): Verified Bluesky account (DID: did:plc:aj4mcik5apf2gq4pi6akpjrk).
 
